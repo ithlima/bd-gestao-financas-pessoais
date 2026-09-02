@@ -338,7 +338,7 @@ O total dos pagamentos não deve ultrapassar o valor da movimentação.
 
 A conta utilizada no pagamento deve pertencer ao mesmo usuário da movimentação.
 
-📊 DRE — Demonstração do Resultado do Exercício
+ DRE — Demonstração do Resultado do Exercício
 
 A DRE será tratada como um relatório calculado a partir das movimentações financeiras reconhecidas no período.
 
@@ -366,7 +366,7 @@ RESULTADO = TOTAL DE RECEITAS - TOTAL DE DESPESAS
 
 A DRE utiliza as movimentações e suas datas de competência, enquanto recebimentos e pagamentos representam o fluxo efetivo de caixa.
 
-🗄 Modelo do Banco de Dados
+ Modelo do Banco de Dados
 
 O banco de dados será composto inicialmente por seis entidades principais:
 
@@ -382,7 +382,7 @@ RECEBIMENTO
 
 PAGAMENTO
 
-👤 USUARIO
+ USUARIO
 
 Campo
 
@@ -492,7 +492,7 @@ Restrição:
 
 UNIQUE(nome, usuario_id)
 
-🏦 CONTA
+CONTA
 
 Campo
 
@@ -546,7 +546,7 @@ Restrição:
 
 UNIQUE(nome, usuario_id)
 
-💸 MOVIMENTACAO
+MOVIMENTACAO
 
 Campo
 
@@ -617,7 +617,7 @@ Relacionamentos:
 USUARIO   1:N MOVIMENTACAO
 CATEGORIA 1:N MOVIMENTACAO
 
-📥 RECEBIMENTO
+RECEBIMENTO
 
 Campo
 
@@ -672,7 +672,7 @@ Relacionamentos:
 MOVIMENTACAO 1:N RECEBIMENTO
 CONTA        1:N RECEBIMENTO
 
-📤 PAGAMENTO
+PAGAMENTO
 
 Campo
 
@@ -727,7 +727,7 @@ Relacionamentos:
 MOVIMENTACAO 1:N PAGAMENTO
 CONTA        1:N PAGAMENTO
 
-🔗 Relacionamentos Definitivos
+Relacionamentos Definitivos
 
                          USUARIO
                     ┌───────────────┐
