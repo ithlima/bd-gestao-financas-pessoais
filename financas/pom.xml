@@ -28,6 +28,12 @@
 	</scm>
 	<properties>
 		<java.version>21</java.version>
+		<!--
+			springdoc-openapi 3.x e a linha compativel com Spring Boot 4 /
+			Spring Framework 7. A linha 2.x atende Spring Boot 3 e NAO funciona
+			aqui: ela depende de APIs do Spring 6 que mudaram.
+		-->
+		<springdoc.version>3.0.2</springdoc.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -48,10 +54,22 @@
 		</dependency>
 
 		<dependency>
-    <groupId>org.mariadb.jdbc</groupId>
-    <artifactId>mariadb-java-client</artifactId>
-    <scope>runtime</scope>
-</dependency>
+			<groupId>org.mariadb.jdbc</groupId>
+			<artifactId>mariadb-java-client</artifactId>
+			<scope>runtime</scope>
+		</dependency>
+
+		<!--
+			Documentacao interativa da API (OpenAPI 3 + Swagger UI).
+			Disponivel em /swagger-ui.html, com o contrato JSON em /v3/api-docs.
+			Este e um projeto academico: poder exercitar os endpoints pela
+			interface web e util para demonstrar o comportamento do sistema.
+		-->
+		<dependency>
+			<groupId>org.springdoc</groupId>
+			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+			<version>${springdoc.version}</version>
+		</dependency>
 		<dependency>
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>
