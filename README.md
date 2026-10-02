@@ -473,11 +473,22 @@ lançamento.
 |---|---|---|
 | `GET` | `/dre?usuarioId=&inicio=&fim=&modo=` | Gera a DRE do período |
 
-`modo` aceita:
+`modo` aceita três valores, e cada um decide **quais valores saem** na resposta:
 
-- `previsto` — filtra títulos por **vencimento** (o que estava planejado para o período);
-- `realizado` — filtra movimentações por **data** (o que de fato aconteceu);
-- `comparativo` — as duas leituras lado a lado (**padrão**).
+| `modo` | Fonte | Data filtrada | O que a resposta traz |
+|---|---|---|---|
+| `previsto` | `titulo` | `vencimento` | só os valores previstos; os realizados vêm `null` |
+| `realizado` | `movimentacao` | `data` | só os valores realizados; os previstos vêm `null` |
+| `comparativo` | as duas | ambas | os dois lados e a `variacaoResultado` (**padrão**) |
+
+Um valor desconhecido devolve **422** dizendo quais são aceitos, em vez de devolver uma
+apuração com o rótulo errado.
+
+Os campos não apurados no modo escolhido vêm como `null`, e não como zero: `null` significa
+"não foi apurado neste modo", enquanto zero afirmaria "é zero" — que é outra informação.
+
+As listas `linhasReceitas` e `linhasDespesas` vêm sempre (mesmo que só com os valores de um
+lado), porque agrupar por tipo de lançamento não depende do modo.
 
 ### Contas a pagar e a receber
 
@@ -792,7 +803,7 @@ mvn test
 Os testes usam um banco separado (`financas_test`, criado automaticamente) e não afetam os
 dados de desenvolvimento.
 
-**58 testes de integração**, todos passando.
+**65 testes de integração**, todos passando.
 
 ---
 
@@ -816,7 +827,7 @@ classe Java, configuração de biblioteca).
 | **409** | `Registro duplicado` | e-mail, nome de conta ou de categoria repetido |
 | **409** | `Recurso em uso` | exclusão bloqueada por registros dependentes (com a contagem) |
 | **409** | `Conflito de integridade` | violação de FK/UNIQUE detectada pelo banco (rede de segurança) |
-| **422** | `Regra de negócio violada` | regra de domínio violada (título quitado, valor acima do em aberto, etc.) |
+| **422** | `Regra de negócio violada` | regra de domínio violada (título quitado, valor acima do em aberto, modo de DRE inválido, etc.) |
 | **500** | `Erro interno` | erro realmente inesperado |
 
 Formato único de resposta:
@@ -992,6 +1003,72 @@ contexto.
 Nenhum desses erros quebra o programa — todos apareceram em testes de comparação de mensagem.
 Mas em um sistema que se propõe a explicar seus erros, a clareza da frase é parte do requisito.
 
+### 7. O parâmetro `modo` da DRE era apenas um rótulo
+
+Defeito encontrado pelo usuário ao testar no Swagger: *"no DRE, quando troco o modo de previsto
+para realizado, aparece nos 2 o resultado"*.
+
+Estava certo. O `modo` era recebido, escrito no campo `modo` da resposta e **não filtrava
+nada**: a DRE sempre devolvia `totalDespesasPrevistas` **e** `totalDespesasRealizadas`
+preenchidos, em qualquer modo. O parâmetro existia, mas não fazia diferença — e o cliente não
+tinha como saber qual número pertencia a qual regime.
+
+**Correção:** o modo passou a decidir **quais valores saem** na resposta.
+
+| Campo | `previsto` | `realizado` | `comparativo` |
+|---|---|---|---|
+| `totalReceitasPrevistas` / `totalDespesasPrevistas` | preenchido | `null` | preenchido |
+| `totalReceitasRealizadas` / `totalDespesasRealizadas` | `null` | preenchido | preenchido |
+| `resultadoPrevisto` | preenchido | `null` | preenchido |
+| `resultadoRealizado` | `null` | preenchido | preenchido |
+| `variacaoResultado` | `null` | `null` | preenchido |
+| valores dentro de cada linha | só previsto | só realizado | os dois |
+
+Três detalhes da decisão:
+
+- **`null`, não zero.** `null` diz "não foi apurado neste modo"; zero afirmaria "é zero", que é
+  uma informação diferente e enganosa.
+- **As listas continuam vindo sempre.** Uma despesa continua sendo despesa em qualquer modo, e
+  devolver a lista como `null` obrigaria o cliente a tratar dois casos para percorrer o
+  relatório. O que muda são os **valores** dentro de cada linha.
+- **O modo passou a ser validado.** Um valor desconhecido gera 422 dizendo quais são aceitos, em
+  vez de devolver silenciosamente uma apuração com o rótulo errado.
+
+O cálculo da variação precisou de cuidado: como o modo anula um dos lados, os totais passaram a
+ser calculados a partir das linhas **completas** (antes do recorte) e só depois o recorte é
+aplicado para montar a resposta. Calcular os totais depois do recorte causava
+`NullPointerException` — o que os testes pegaram.
+
+### 8. Acentuação corrompida (mojibake) nos textos da API
+
+Segundo defeito relatado pelo usuário: *"algumas palavras estão bugadas com acentuação"*.
+
+A causa não era o Swagger nem o Spring: era **dupla codificação nos arquivos-fonte**, causada
+por scripts PowerShell usados durante o desenvolvimento, que leram e gravaram os arquivos com
+codificações incompatíveis. O sintoma é o clássico mojibake — um caractere acentuado vira dois:
+
+```text
+"Títulos"  correto: U+0054 U+00ED ...
+"TÃtulos"  errado:  U+0054 U+00C3 U+00AD ...
+```
+
+Nos bytes, o "í" correto é `C3 AD`; corrompido vira `C3 83 C2 AD`.
+
+**Correção:** os 12 arquivos afetados foram reprocessados com a operação inversa da dupla
+codificação — ler o texto como UTF-8, recuperar os bytes originais via Latin-1 e reinterpretar
+como UTF-8, aplicado diretamente nos bytes do arquivo. O README e o `ANALISE-E-PLANO.md` também
+estavam afetados.
+
+**Lição:** ao escrever arquivos com acento no Windows, use uma API com codificação explícita.
+O `Set-Content -Encoding UTF8` do PowerShell 5.1 adiciona BOM, e o console exibe UTF-8 como
+Latin-1 — o que faz um arquivo **correto** parecer corrompido e um **corrompido** passar
+despercebido. Duas medições minhas seguiram essa pista falsa antes de eu comparar os bytes de
+fato.
+
+**Testes que travam a correção:** `contratoTemAcentuacaoCorreta` e `descricoesMantemAcentuacao`
+verificam que o contrato contém `Títulos` com U+00ED e que **não** contém a sequência de
+mojibake. Se a codificação quebrar de novo, o build falha.
+
 ---
 
 ## Decisões de projeto
@@ -1038,7 +1115,7 @@ Funcional e em evolução. Estão implementados e cobertos por testes:
 - o **tratamento de erros** completo: 10 status HTTP distintos, formato único de resposta e
   tradução de mensagens sem vazamento de detalhe interno.
 
-**58 testes de integração**, todos passando.
+**65 testes de integração**, todos passando.
 
 ## Licença
 

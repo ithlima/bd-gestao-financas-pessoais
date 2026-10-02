@@ -24,6 +24,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -674,5 +675,106 @@ class RegrasFinanceirasIntegrationTest {
 
     verificarValor("Bruno não vê a previsão da Ana", "0.00", dreDoBruno.totalDespesasPrevistas());
     assertTrue(dreDoBruno.linhasDespesas().isEmpty());
+  }
+
+  // ==================================================================
+  // Modo de apuração da DRE
+  // ==================================================================
+
+  @Test
+  @DisplayName("O modo 'previsto' só devolve valores previstos; o realizado vem nulo")
+  void modoPrevistoNaoDevolveRealizado() {
+    Long titulo = criarTituloDespesa("Aluguel", "1200.00", LocalDate.of(2026, 3, 10));
+    tituloService.pagar(titulo, new BigDecimal("1200.00"), LocalDate.of(2026, 3, 10), CONTA_DA_ANA);
+
+    DreResponse dre = dreService.gerar(ANA, INICIO, FIM, "previsto");
+
+    assertEquals("previsto", dre.modo());
+    verificarValor("Previsão de despesas", "1200.00", dre.totalDespesasPrevistas());
+    verificarValor("Previsão de receitas", "0.00", dre.totalReceitasPrevistas());
+    verificarValor("Resultado previsto", "-1200.00", dre.resultadoPrevisto());
+
+    // O realizado NÃO sai neste modo. Antes da correção, o `modo` era apenas um
+    // rótulo: pedir "previsto" devolvia os dois lados preenchidos, e o cliente não
+    // tinha como saber qual número pertencia a qual regime.
+    assertNull(dre.totalDespesasRealizadas(), "Modo 'previsto' não deve devolver o realizado");
+    assertNull(dre.totalReceitasRealizadas(), "Modo 'previsto' não deve devolver o realizado");
+    assertNull(dre.resultadoRealizado(), "Modo 'previsto' não deve devolver o resultado realizado");
+    assertNull(dre.variacaoResultado(), "Modo 'previsto' não tem variação");
+    assertFalse(dre.variacaoFavoravel(), "Sem variação apurada, não há favorabilidade");
+
+    // As linhas seguem a mesma regra.
+    var linha = dre.linhasDespesas().get(0);
+    verificarValor("Linha: previsto", "1200.00", linha.valorPrevisto());
+    assertNull(linha.valorRealizado(), "A linha não deve trazer o realizado no modo 'previsto'");
+    assertNull(linha.variacao(), "A linha não deve trazer variação no modo 'previsto'");
+  }
+
+  @Test
+  @DisplayName("O modo 'realizado' só devolve valores realizados; o previsto vem nulo")
+  void modoRealizadoNaoDevolvePrevisto() {
+    Long titulo = criarTituloDespesa("Aluguel", "1200.00", LocalDate.of(2026, 3, 10));
+    tituloService.pagar(titulo, new BigDecimal("1200.00"), LocalDate.of(2026, 3, 10), CONTA_DA_ANA);
+
+    DreResponse dre = dreService.gerar(ANA, INICIO, FIM, "realizado");
+
+    assertEquals("realizado", dre.modo());
+    verificarValor("Realização de despesas", "1200.00", dre.totalDespesasRealizadas());
+    verificarValor("Resultado realizado", "-1200.00", dre.resultadoRealizado());
+
+    assertNull(dre.totalDespesasPrevistas(), "Modo 'realizado' não deve devolver o previsto");
+    assertNull(dre.totalReceitasPrevistas(), "Modo 'realizado' não deve devolver o previsto");
+    assertNull(dre.resultadoPrevisto(), "Modo 'realizado' não deve devolver o resultado previsto");
+    assertNull(dre.variacaoResultado(), "Modo 'realizado' não tem variação");
+
+    var linha = dre.linhasDespesas().get(0);
+    assertNull(linha.valorPrevisto(), "A linha não deve trazer o previsto no modo 'realizado'");
+    verificarValor("Linha: realizado", "1200.00", linha.valorRealizado());
+  }
+
+  @Test
+  @DisplayName("O modo 'comparativo' devolve os dois lados e a variação")
+  void modoComparativoDevolveOsDoisLados() {
+    Long titulo = criarTituloDespesa("Aluguel", "1200.00", LocalDate.of(2026, 3, 10));
+    tituloService.pagar(titulo, new BigDecimal("900.00"), LocalDate.of(2026, 3, 10), CONTA_DA_ANA);
+
+    DreResponse dre = dreService.gerar(ANA, INICIO, FIM, "comparativo");
+
+    assertEquals("comparativo", dre.modo());
+    verificarValor("Previsto", "1200.00", dre.totalDespesasPrevistas());
+    verificarValor("Realizado", "900.00", dre.totalDespesasRealizadas());
+    // Gastou 300 a menos que o previsto: variação favorável.
+    verificarValor("Variação", "300.00", dre.variacaoResultado());
+    assertTrue(dre.variacaoFavoravel());
+
+    var linha = dre.linhasDespesas().get(0);
+    verificarValor("Linha: previsto", "1200.00", linha.valorPrevisto());
+    verificarValor("Linha: realizado", "900.00", linha.valorRealizado());
+    verificarValor("Linha: variação", "300.00", linha.variacao());
+  }
+
+  @Test
+  @DisplayName("Modo inválido é recusado com mensagem que diz quais são aceitos")
+  void modoInvalidoEhRecusado() {
+    RegraNegocioException erro =
+        assertThrows(
+            RegraNegocioException.class, () -> dreService.gerar(ANA, INICIO, FIM, "inventado"));
+
+    assertTrue(erro.getMessage().contains("inventado"), erro.getMessage());
+    assertTrue(erro.getMessage().contains("previsto"), erro.getMessage());
+    assertTrue(erro.getMessage().contains("realizado"), erro.getMessage());
+    assertTrue(erro.getMessage().contains("comparativo"), erro.getMessage());
+  }
+
+  @Test
+  @DisplayName("Modo omitido equivale a 'comparativo'")
+  void modoOmitidoEquivaleAComparativo() {
+    criarTituloDespesa("Aluguel", "1200.00", LocalDate.of(2026, 3, 10));
+
+    DreResponse semModo = dreService.gerar(ANA, INICIO, FIM, null);
+
+    assertEquals("comparativo", semModo.modo());
+    assertNotNull(semModo.totalDespesasPrevistas());
+    assertNotNull(semModo.totalDespesasRealizadas());
   }
 }

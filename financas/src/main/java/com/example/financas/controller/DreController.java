@@ -89,7 +89,7 @@ public class DreController {
           adapta a qualquer usuário.
 
           **Erros:** 400 para data em formato inválido; 404 se o usuário não existir;
-          422 se a data de início for posterior à de fim.
+          422 se a data de início for posterior à de fim, ou se o `modo` não for um dos três aceitos.
           """)
   @GetMapping
   public DreResponse gerar(

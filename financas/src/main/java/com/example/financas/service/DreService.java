@@ -102,6 +102,10 @@ public class DreService {
       throw new RegraNegocioException("A data de início não pode ser posterior à data de fim");
     }
 
+    String modoNormalizado = normalizarModo(modo);
+    boolean mostrarPrevisto = !modoNormalizado.equals("realizado");
+    boolean mostrarRealizado = !modoNormalizado.equals("previsto");
+
     // Falha cedo (404) se o usuário não existir, em vez de devolver uma DRE
     // vazia que pareceria "nenhum lançamento" quando na verdade é "usuário errado".
     usuarioService.buscarEntidade(usuarioId);
@@ -110,40 +114,59 @@ public class DreService {
     List<DreRealizadoProjection> realizados =
         movimentacaoRepository.somarRealizadoPorCategoria(usuarioId, inicio, fim);
 
-    List<DreLinhaResponse> linhas = montarLinhas(previsoes, realizados);
+    // As duas fontes são somadas SEMPRE. O modo decide apenas o que sai na
+    // resposta; os totais precisam dos dois lados para o cálculo da variação.
+    List<DreLinhaResponse> todasAsLinhas = montarLinhas(previsoes, realizados, true, true);
 
-    List<DreLinhaResponse> linhasReceitas =
-        linhas.stream().filter(l -> l.tipo() == TipoMovimentacao.RECEITA).toList();
-    List<DreLinhaResponse> linhasDespesas =
-        linhas.stream().filter(l -> l.tipo() == TipoMovimentacao.DESPESA).toList();
+    List<DreLinhaResponse> receitas =
+        todasAsLinhas.stream().filter(l -> l.tipo() == TipoMovimentacao.RECEITA).toList();
+    List<DreLinhaResponse> despesas =
+        todasAsLinhas.stream().filter(l -> l.tipo() == TipoMovimentacao.DESPESA).toList();
 
-    BigDecimal totalReceitasPrevistas = somar(linhasReceitas, true);
-    BigDecimal totalReceitasRealizadas = somar(linhasReceitas, false);
-    BigDecimal totalDespesasPrevistas = somar(linhasDespesas, true);
-    BigDecimal totalDespesasRealizadas = somar(linhasDespesas, false);
+    BigDecimal totalReceitasPrevistas = somar(receitas, true);
+    BigDecimal totalReceitasRealizadas = somar(receitas, false);
+    BigDecimal totalDespesasPrevistas = somar(despesas, true);
+    BigDecimal totalDespesasRealizadas = somar(despesas, false);
 
     BigDecimal resultadoPrevisto = totalReceitasPrevistas.subtract(totalDespesasPrevistas);
     BigDecimal resultadoRealizado = totalReceitasRealizadas.subtract(totalDespesasRealizadas);
     BigDecimal variacao = resultadoRealizado.subtract(resultadoPrevisto);
 
-    List<DreTituloVencidoResponse> vencidos = montarVencidos(usuarioId, LocalDate.now());
+    // Listas com o recorte do modo já aplicado — são estas que vão na RESPOSTA.
+    //
+    // As LISTAS sempre vêm (vazias quando não há linhas), porque elas agrupam por
+    // tipo: uma despesa continua sendo despesa em qualquer modo. O que o modo
+    // decide é quais VALORES cada linha traz. Devolver a lista como null obrigaria
+    // o cliente a tratar dois casos para percorrer o relatório.
+    List<DreLinhaResponse> linhasVisiveis =
+        montarLinhas(previsoes, realizados, mostrarPrevisto, mostrarRealizado);
 
+    List<DreLinhaResponse> receitasVisiveis =
+        linhasVisiveis.stream().filter(l -> l.tipo() == TipoMovimentacao.RECEITA).toList();
+    List<DreLinhaResponse> despesasVisiveis =
+        linhasVisiveis.stream().filter(l -> l.tipo() == TipoMovimentacao.DESPESA).toList();
+
+    List<DreTituloVencidoResponse> vencidos = montarVencidos(usuarioId, LocalDate.now());
     return new DreResponse(
         usuarioId,
-        modo == null ? "comparativo" : modo.toLowerCase(),
+        modoNormalizado,
         inicio,
         fim,
-        linhasReceitas,
-        totalReceitasPrevistas,
-        totalReceitasRealizadas,
-        linhasDespesas,
-        totalDespesasPrevistas,
-        totalDespesasRealizadas,
-        resultadoPrevisto,
-        resultadoRealizado,
-        variacao,
+        // Os quatro blocos abaixo são `null` quando o modo não os pede.
+        // Sem isso, `modo` seria apenas um rótulo: pedir "realizado" devolveria
+        // os valores previstos do mesmo jeito, e o cliente não teria como saber
+        // qual número pertence a qual regime.
+        receitasVisiveis,
+        mostrarPrevisto ? totalReceitasPrevistas : null,
+        mostrarRealizado ? totalReceitasRealizadas : null,
+        despesasVisiveis,
+        mostrarPrevisto ? totalDespesasPrevistas : null,
+        mostrarRealizado ? totalDespesasRealizadas : null,
+        mostrarPrevisto ? resultadoPrevisto : null,
+        mostrarRealizado ? resultadoRealizado : null,
+        mostrarPrevisto && mostrarRealizado ? variacao : null,
         // variação >= 0 é favorável: resultado realizado igual ou melhor que o previsto
-        variacao.compareTo(BigDecimal.ZERO) >= 0,
+        mostrarPrevisto && mostrarRealizado && variacao.compareTo(BigDecimal.ZERO) >= 0,
         vencidos,
         vencidos.stream()
             .map(DreTituloVencidoResponse::valorPrevisto)
@@ -163,7 +186,10 @@ public class DreService {
    * têm realização aparecem com previsto zero (ex.: um gasto imprevisto).
    */
   private List<DreLinhaResponse> montarLinhas(
-      List<DrePrevisaoProjection> previsoes, List<DreRealizadoProjection> realizados) {
+      List<DrePrevisaoProjection> previsoes,
+      List<DreRealizadoProjection> realizados,
+      boolean mostrarPrevisto,
+      boolean mostrarRealizado) {
 
     Map<String, Acumulador> porCategoria = new LinkedHashMap<>();
 
@@ -184,11 +210,31 @@ public class DreService {
     }
 
     return porCategoria.values().stream()
-        .map(Acumulador::paraLinha)
+        .map(a -> a.paraLinha(mostrarPrevisto, mostrarRealizado))
         .sorted(
             Comparator.comparing((DreLinhaResponse l) -> l.tipo().name())
                 .thenComparing(DreLinhaResponse::categoriaNome))
         .toList();
+  }
+
+  /**
+   * Valida e normaliza o modo de apuração.
+   *
+   * <p>Aceitar qualquer texto e devolver uma DRE com o rótulo errado seria pior
+   * do que recusar: o cliente acharia que pediu "realizado" e receberia outra
+   * coisa, sem aviso. Com a validação, um modo inválido vira 422 explicando quais
+   * são os aceitos.
+   */
+  private String normalizarModo(String modo) {
+    if (modo == null || modo.isBlank()) {
+      return "comparativo";
+    }
+    String normalizado = modo.trim().toLowerCase(java.util.Locale.ROOT);
+    if (!List.of("previsto", "realizado", "comparativo").contains(normalizado)) {
+      throw new RegraNegocioException(
+          "Modo de apuração inválido: '" + modo + "'. Use 'previsto', 'realizado' ou 'comparativo'");
+    }
+    return normalizado;
   }
 
   private String chave(String tipo, Long categoriaId) {
@@ -255,9 +301,19 @@ public class DreService {
       this.tipo = TipoMovimentacao.valueOf(tipo);
     }
 
-    private DreLinhaResponse paraLinha() {
+    private DreLinhaResponse paraLinha(boolean mostrarPrevisto, boolean mostrarRealizado) {
+      // No modo "previsto" ou "realizado", o valor do outro regime sai como null
+      // em vez de zero: null diz "não foi apurado neste modo", enquanto zero
+      // afirmaria "é zero", que é uma informação diferente.
       return new DreLinhaResponse(
-          categoriaId, categoriaNome, tipo, previsto, realizado, calcularVariacao(tipo, previsto, realizado));
+          categoriaId,
+          categoriaNome,
+          tipo,
+          mostrarPrevisto ? previsto : null,
+          mostrarRealizado ? realizado : null,
+          mostrarPrevisto && mostrarRealizado
+              ? calcularVariacao(tipo, previsto, realizado)
+              : null);
     }
 
     /**

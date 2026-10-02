@@ -305,4 +305,57 @@ class DocumentacaoOpenApiTest {
     assertTrue(doc.has("openapi"), "O contrato precisa declarar a versão do OpenAPI");
     assertTrue(doc.has("paths"), "O contrato precisa ter paths");
   }
+
+  // ==================================================================
+  // Acentuação
+  // ==================================================================
+
+  @Test
+  @DisplayName("O contrato é UTF-8 válido: os acentos chegam como caracteres únicos")
+  void contratoTemAcentuacaoCorreta() throws Exception {
+    String json =
+        mockMvc
+            .perform(get("/v3/api-docs"))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+
+    // "Títulos" com i-acento (U+00ED). Se a codificação quebrar em algum ponto da
+    // cadeia, o mesmo caractere vira dois: "Ã" (U+00C3) seguido de um soft hyphen
+    // (U+00AD). É o defeito conhecido como mojibake, e ele apareceu de verdade no
+    // Swagger deste projeto — daí este teste.
+    assertTrue(
+        json.contains("T\u00EDtulos"),
+        "O contrato deveria conter 'Títulos' com i-acento (U+00ED)");
+
+    assertFalse(
+        json.contains("T\u00C3\u00ADtulos"),
+        "Acentuação corrompida no contrato: 'Títulos' virou 'TÃ\u00ADtulos' (mojibake)");
+
+    // Outras palavras acentuadas que aparecem nas descrições e nos nomes das tags.
+    for (String palavra :
+        List.of("Usu\u00E1rios", "Movimenta\u00E7\u00F5es", "situa\u00E7\u00E3o")) {
+      assertTrue(
+          json.contains(palavra),
+          "O contrato deveria conter '" + palavra + "' com a acentuação correta");
+    }
+  }
+
+  @Test
+  @DisplayName("As descrições dos endpoints mantêm a acentuação")
+  void descricoesMantemAcentuacao() throws Exception {
+    JsonNode dre = lerContrato().path("paths").path("/api/v1/dre").path("get");
+    String texto = dre.path("summary").asString() + " " + dre.path("description").asString();
+
+    // "período" tem i-acento; "apuração" tem c-cedilha e a-til.
+    assertTrue(
+        texto.contains("per\u00EDodo"), "A descrição da DRE perdeu o acento de 'período'");
+    assertTrue(
+        texto.contains("apura\u00E7\u00E3o"),
+        "A descrição da DRE perdeu o acento de 'apuração'");
+    assertFalse(
+        texto.contains("\u00C3"),
+        "A descrição da DRE tem mojibake: " + texto.substring(0, Math.min(200, texto.length())));
+  }
 }

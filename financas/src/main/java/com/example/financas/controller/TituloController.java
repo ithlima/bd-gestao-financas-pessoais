@@ -23,32 +23,32 @@ import java.time.LocalDate;
 import java.util.List;
 
 /**
- * Endpoints de <b>tÃ­tulos</b> â€” os compromissos financeiros previstos.
+ * Endpoints de <b>títulos</b> â€” os compromissos financeiros previstos.
  *
- * <p>Este Ã© o controller que materializa a separaÃ§Ã£o entre previsÃ£o e
- * realizaÃ§Ã£o:
+ * <p>Este é o controller que materializa a separação entre previsão e
+ * realização:
  *
  * <pre>
  *   POST /titulos                  -> cria a PREVISÃƒO. Nada acontece no caixa
  *                                     e nada muda na DRE realizada.
  *   POST /titulos/{id}/pagar       -> registra a REALIZAÃ‡ÃƒO (despesa paga):
- *                                     cria a movimentaÃ§Ã£o e atualiza o tÃ­tulo.
+ *                                     cria a movimentação e atualiza o título.
  *   POST /titulos/{id}/receber     -> registra a REALIZAÃ‡ÃƒO (receita recebida).
- *   POST /titulos/{id}/cancelar    -> desfaz a previsÃ£o, se nada foi realizado.
+ *   POST /titulos/{id}/cancelar    -> desfaz a previsão, se nada foi realizado.
  * </pre>
  *
- * <p>Repare que nÃ£o existe endpoint para "criar a despesa de um tÃ­tulo". Essa
- * operaÃ§Ã£o simplesmente nÃ£o existe: despesa Ã© consequÃªncia de pagamento, nunca
+ * <p>Repare que não existe endpoint para "criar a despesa de um título". Essa
+ * operação simplesmente não existe: despesa é consequência de pagamento, nunca
  * de cadastro.
  */
 @Tag(
-    name = "TÃ­tulos",
+    name = "Títulos",
     description =
         """
         Os **compromissos previstos** â€” o que se tem a pagar ou a receber.
 
-        Cadastrar um tÃ­tulo **nÃ£o** cria despesa: nenhum valor sai ou entra, e a DRE
-        realizada permanece inalterada. A despesa passa a existir quando o tÃ­tulo Ã© pago ou
+        Cadastrar um título **não** cria despesa: nenhum valor sai ou entra, e a DRE
+        realizada permanece inalterada. A despesa passa a existir quando o título é pago ou
         recebido.
         """)
 @RestController
@@ -62,17 +62,17 @@ public class TituloController {
   }
 
   @Operation(
-      summary = "Lista os tÃ­tulos (previstos)",
+      summary = "Lista os títulos (previstos)",
       description =
           """
-          Lista os tÃ­tulos do usuÃ¡rio, com filtros opcionais:
+          Lista os títulos do usuário, com filtros opcionais:
 
           - `tipo` â€” RECEITA (a receber) ou DESPESA (a pagar);
-          - `situacao` â€” a situaÃ§Ã£o **armazenada**: PENDENTE, PAGO ou CANCELADO.
+          - `situacao` â€” a situação **armazenada**: PENDENTE, PAGO ou CANCELADO.
 
-          Para a situaÃ§Ã£o **efetiva** (que inclui VENCIDO), consulte o campo
-          `situacaoEfetiva` de cada item. VENCIDO nÃ£o Ã© armazenado: Ã© derivado da
-          comparaÃ§Ã£o entre o vencimento e a data de hoje.
+          Para a situação **efetiva** (que inclui VENCIDO), consulte o campo
+          `situacaoEfetiva` de cada item. VENCIDO não é armazenado: é derivado da
+          comparação entre o vencimento e a data de hoje.
           """)
   @GetMapping
   public List<TituloResponse> listar(
@@ -83,23 +83,23 @@ public class TituloController {
   }
 
   @Operation(
-      summary = "Busca um tÃ­tulo por id",
-      description = "Responde 404 se o id nÃ£o existir.")
+      summary = "Busca um título por id",
+      description = "Responde 404 se o id não existir.")
   @GetMapping("/{id}")
   public TituloResponse buscarPorId(@PathVariable Long id) {
     return tituloService.buscarPorId(id);
   }
 
   @Operation(
-      summary = "Lista os tÃ­tulos vencidos",
+      summary = "Lista os títulos vencidos",
       description =
           """
-          Lista os tÃ­tulos **pendentes com vencimento jÃ¡ ultrapassado**.
+          Lista os títulos **pendentes com vencimento já ultrapassado**.
 
-          Um tÃ­tulo cancelado nÃ£o Ã© atraso, e um jÃ¡ quitado tambÃ©m nÃ£o â€” por isso sÃ³ os
+          Um título cancelado não é atraso, e um já quitado também não â€” por isso só os
           pendentes aparecem.
 
-          O parÃ¢metro `referencia` permite simular outra data; quando omitido, usa hoje.
+          O parâmetro `referencia` permite simular outra data; quando omitido, usa hoje.
           """)
   @GetMapping("/vencidos")
   public List<TituloResponse> vencidos(
@@ -110,20 +110,20 @@ public class TituloController {
   }
 
   @Operation(
-      summary = "Cadastra um tÃ­tulo (previsÃ£o)",
+      summary = "Cadastra um título (previsão)",
       description =
           """
-          Registra um compromisso futuro. **Nada acontece no caixa** e a DRE realizada nÃ£o
-          muda: o tÃ­tulo passa a existir apenas como previsÃ£o.
+          Registra um compromisso futuro. **Nada acontece no caixa** e a DRE realizada não
+          muda: o título passa a existir apenas como previsão.
 
-          A categoria Ã© obrigatÃ³ria e precisa ser do mesmo tipo do tÃ­tulo (RN03) â€” uma
-          receita nÃ£o pode ser classificada em "Moradia", por exemplo.
+          A categoria é obrigatória e precisa ser do mesmo tipo do título (RN03) â€” uma
+          receita não pode ser classificada em "Moradia", por exemplo.
 
-          O tÃ­tulo nasce com `situacao = PENDENTE` e `valorRealizado = 0`. A situaÃ§Ã£o
-          `situacaoEfetiva` jÃ¡ vem como VENCIDO se o vencimento informado for no passado.
+          O título nasce com `situacao = PENDENTE` e `valorRealizado = 0`. A situação
+          `situacaoEfetiva` já vem como VENCIDO se o vencimento informado for no passado.
 
-          **Erros:** 400 para campo invÃ¡lido; 404 se usuÃ¡rio ou categoria nÃ£o existirem;
-          422 se a categoria for de outro usuÃ¡rio ou de tipo incompatÃ­vel.
+          **Erros:** 400 para campo inválido; 404 se usuário ou categoria não existirem;
+          422 se a categoria for de outro usuário ou de tipo incompatível.
           """)
   @ApiResponses({
     @ApiResponse(
@@ -133,17 +133,17 @@ public class TituloController {
             schema = @Schema(implementation = TituloResponse.class))),
     @ApiResponse(
         responseCode = "400",
-        description = "RequisiÃ§Ã£o invÃ¡lida: campo reprovado, JSON malformado, enum ou data invÃ¡lidos.",
+        description = "Requisição inválida: campo reprovado, JSON malformado, enum ou data inválidos.",
         content = @Content(mediaType = "application/json",
             schema = @Schema(implementation = ErroResponse.class))),
     @ApiResponse(
         responseCode = "404",
-        description = "Recurso nÃ£o encontrado (id inexistente).",
+        description = "Recurso não encontrado (id inexistente).",
         content = @Content(mediaType = "application/json",
             schema = @Schema(implementation = ErroResponse.class))),
     @ApiResponse(
         responseCode = "422",
-        description = "Regra de negÃ³cio violada.",
+        description = "Regra de negócio violada.",
         content = @Content(mediaType = "application/json",
             schema = @Schema(implementation = ErroResponse.class))),
     @ApiResponse(
@@ -158,17 +158,17 @@ public class TituloController {
   }
 
   @Operation(
-      summary = "Atualiza um tÃ­tulo pendente",
+      summary = "Atualiza um título pendente",
       description =
           """
-          Altera descriÃ§Ã£o, valor previsto, vencimento, categoria e observaÃ§Ã£o.
+          Altera descrição, valor previsto, vencimento, categoria e observação.
 
-          **RestriÃ§Ãµes** (422 se violadas):
+          **Restrições** (422 se violadas):
 
-          - o `tipo` **nÃ£o pode ser alterado** â€” para mudar a direÃ§Ã£o, cadastre outro tÃ­tulo;
-          - um tÃ­tulo **cancelado** nÃ£o pode ser alterado;
-          - um tÃ­tulo **quitado** nÃ£o pode ser alterado;
-          - o novo `valorPrevisto` nÃ£o pode ser **menor que o valor jÃ¡ realizado**.
+          - o `tipo` **não pode ser alterado** â€” para mudar a direção, cadastre outro título;
+          - um título **cancelado** não pode ser alterado;
+          - um título **quitado** não pode ser alterado;
+          - o novo `valorPrevisto` não pode ser **menor que o valor já realizado**.
           """)
   @PutMapping("/{id}")
   public TituloResponse atualizar(
@@ -177,52 +177,52 @@ public class TituloController {
   }
 
   @Operation(
-      summary = "Paga um tÃ­tulo de despesa",
+      summary = "Paga um título de despesa",
       description =
           """
-          **Esta Ã© a operaÃ§Ã£o que transforma previsÃ£o em realizaÃ§Ã£o.**
+          **Esta é a operação que transforma previsão em realização.**
 
-          Registra o pagamento, cria a **movimentaÃ§Ã£o** correspondente (valor realizado,
+          Registra o pagamento, cria a **movimentação** correspondente (valor realizado,
           data do pagamento, conta utilizada) e, se a soma dos pagamentos atingir o valor
-          previsto, marca o tÃ­tulo como PAGO.
+          previsto, marca o título como PAGO.
 
-          ## Pagamento parcial Ã© permitido
+          ## Pagamento parcial é permitido
 
-          O `valor` pode ser **menor** que o valor previsto. Nesse caso o tÃ­tulo continua
+          O `valor` pode ser **menor** que o valor previsto. Nesse caso o título continua
           PENDENTE e o quanto falta aparece em `valorEmAberto`. Ã‰ assim que se registra um
           aluguel pago em duas vezes.
 
-          "PAGO" significa **quitado**, nÃ£o "teve algum pagamento".
+          "PAGO" significa **quitado**, não "teve algum pagamento".
 
-          ## O que esta operaÃ§Ã£o valida
+          ## O que esta operação valida
 
-          - o tÃ­tulo precisa ser do tipo DESPESA â€” para receita, use `/receber` (422);
-          - o tÃ­tulo nÃ£o pode estar cancelado nem jÃ¡ quitado (422);
-          - o valor nÃ£o pode ultrapassar o que estÃ¡ em aberto (422);
-          - a conta precisa pertencer ao mesmo usuÃ¡rio do tÃ­tulo (422).
+          - o título precisa ser do tipo DESPESA â€” para receita, use `/receber` (422);
+          - o título não pode estar cancelado nem já quitado (422);
+          - o valor não pode ultrapassar o que está em aberto (422);
+          - a conta precisa pertencer ao mesmo usuário do título (422).
 
-          Tudo acontece em uma Ãºnica transaÃ§Ã£o: ou a movimentaÃ§Ã£o Ã© criada **e** o tÃ­tulo
-          atualizado, ou nada Ã© gravado.
+          Tudo acontece em uma única transação: ou a movimentação é criada **e** o título
+          atualizado, ou nada é gravado.
           """)
   @ApiResponses({
     @ApiResponse(
         responseCode = "200",
-        description = "OperaÃ§Ã£o concluÃ­da. O tÃ­tulo devolvido traz a situaÃ§Ã£o atualizada.",
+        description = "Operação concluída. O título devolvido traz a situação atualizada.",
         content = @Content(mediaType = "application/json",
             schema = @Schema(implementation = TituloResponse.class))),
     @ApiResponse(
         responseCode = "400",
-        description = "RequisiÃ§Ã£o invÃ¡lida: campo reprovado, JSON malformado, enum ou data invÃ¡lidos.",
+        description = "Requisição inválida: campo reprovado, JSON malformado, enum ou data inválidos.",
         content = @Content(mediaType = "application/json",
             schema = @Schema(implementation = ErroResponse.class))),
     @ApiResponse(
         responseCode = "404",
-        description = "Recurso nÃ£o encontrado (id inexistente).",
+        description = "Recurso não encontrado (id inexistente).",
         content = @Content(mediaType = "application/json",
             schema = @Schema(implementation = ErroResponse.class))),
     @ApiResponse(
         responseCode = "422",
-        description = "Regra de negÃ³cio violada.",
+        description = "Regra de negócio violada.",
         content = @Content(mediaType = "application/json",
             schema = @Schema(implementation = ErroResponse.class))),
     @ApiResponse(
@@ -238,40 +238,40 @@ public class TituloController {
   }
 
   @Operation(
-      summary = "Recebe um tÃ­tulo de receita",
+      summary = "Recebe um título de receita",
       description =
           """
-          OperaÃ§Ã£o espelho de `/pagar`, para tÃ­tulos do tipo RECEITA.
+          Operação espelho de `/pagar`, para títulos do tipo RECEITA.
 
-          Registra que o dinheiro **efetivamente entrou**, cria a movimentaÃ§Ã£o de RECEITA e
-          quita o tÃ­tulo quando o total recebido atinge o valor previsto.
+          Registra que o dinheiro **efetivamente entrou**, cria a movimentação de RECEITA e
+          quita o título quando o total recebido atinge o valor previsto.
 
-          Aceita recebimento parcial, pelas mesmas regras do pagamento: o tÃ­tulo permanece
+          Aceita recebimento parcial, pelas mesmas regras do pagamento: o título permanece
           PENDENTE enquanto faltar valor.
 
-          **Erros:** 422 se o tÃ­tulo for do tipo DESPESA (use `/pagar`), se estiver
+          **Erros:** 422 se o título for do tipo DESPESA (use `/pagar`), se estiver
           cancelado ou quitado, se o valor ultrapassar o em aberto, ou se a conta for de
-          outro usuÃ¡rio.
+          outro usuário.
           """)
   @ApiResponses({
     @ApiResponse(
         responseCode = "200",
-        description = "OperaÃ§Ã£o concluÃ­da. O tÃ­tulo devolvido traz a situaÃ§Ã£o atualizada.",
+        description = "Operação concluída. O título devolvido traz a situação atualizada.",
         content = @Content(mediaType = "application/json",
             schema = @Schema(implementation = TituloResponse.class))),
     @ApiResponse(
         responseCode = "400",
-        description = "RequisiÃ§Ã£o invÃ¡lida: campo reprovado, JSON malformado, enum ou data invÃ¡lidos.",
+        description = "Requisição inválida: campo reprovado, JSON malformado, enum ou data inválidos.",
         content = @Content(mediaType = "application/json",
             schema = @Schema(implementation = ErroResponse.class))),
     @ApiResponse(
         responseCode = "404",
-        description = "Recurso nÃ£o encontrado (id inexistente).",
+        description = "Recurso não encontrado (id inexistente).",
         content = @Content(mediaType = "application/json",
             schema = @Schema(implementation = ErroResponse.class))),
     @ApiResponse(
         responseCode = "422",
-        description = "Regra de negÃ³cio violada.",
+        description = "Regra de negócio violada.",
         content = @Content(mediaType = "application/json",
             schema = @Schema(implementation = ErroResponse.class))),
     @ApiResponse(
@@ -287,37 +287,37 @@ public class TituloController {
   }
 
   @Operation(
-      summary = "Cancela um tÃ­tulo",
+      summary = "Cancela um título",
       description =
           """
-          Desfaz a previsÃ£o. O tÃ­tulo sai da DRE prevista e nunca chegou a existir na DRE
+          Desfaz a previsão. O título sai da DRE prevista e nunca chegou a existir na DRE
           realizada.
 
-          **SÃ³ Ã© permitido se nada foi realizado** (422): se jÃ¡ houve pagamento, o dinheiro
-          efetivamente se moveu e nÃ£o se pode simplesmente apagar o compromisso â€” seria
-          preciso estornar a movimentaÃ§Ã£o antes.
+          **Só é permitido se nada foi realizado** (422): se já houve pagamento, o dinheiro
+          efetivamente se moveu e não se pode simplesmente apagar o compromisso â€” seria
+          preciso estornar a movimentação antes.
 
-          TambÃ©m responde 422 se o tÃ­tulo jÃ¡ estiver cancelado ou quitado.
+          Também responde 422 se o título já estiver cancelado ou quitado.
           """)
   @ApiResponses({
     @ApiResponse(
         responseCode = "200",
-        description = "OperaÃ§Ã£o concluÃ­da. O tÃ­tulo devolvido traz a situaÃ§Ã£o atualizada.",
+        description = "Operação concluída. O título devolvido traz a situação atualizada.",
         content = @Content(mediaType = "application/json",
             schema = @Schema(implementation = TituloResponse.class))),
     @ApiResponse(
         responseCode = "400",
-        description = "RequisiÃ§Ã£o invÃ¡lida: campo reprovado, JSON malformado, enum ou data invÃ¡lidos.",
+        description = "Requisição inválida: campo reprovado, JSON malformado, enum ou data inválidos.",
         content = @Content(mediaType = "application/json",
             schema = @Schema(implementation = ErroResponse.class))),
     @ApiResponse(
         responseCode = "404",
-        description = "Recurso nÃ£o encontrado (id inexistente).",
+        description = "Recurso não encontrado (id inexistente).",
         content = @Content(mediaType = "application/json",
             schema = @Schema(implementation = ErroResponse.class))),
     @ApiResponse(
         responseCode = "422",
-        description = "Regra de negÃ³cio violada.",
+        description = "Regra de negócio violada.",
         content = @Content(mediaType = "application/json",
             schema = @Schema(implementation = ErroResponse.class))),
     @ApiResponse(
@@ -332,18 +332,18 @@ public class TituloController {
   }
 
   @Operation(
-      summary = "Remove um tÃ­tulo",
+      summary = "Remove um título",
       description =
           """
-          Exclui o tÃ­tulo **somente se ele nÃ£o tiver movimentaÃ§Ãµes vinculadas**.
+          Exclui o título **somente se ele não tiver movimentações vinculadas**.
 
-          Como as movimentaÃ§Ãµes tÃªm chave estrangeira para o tÃ­tulo, um tÃ­tulo que jÃ¡ foi
-          pago nÃ£o pode ser apagado. Para desfazer um compromisso que teve dinheiro
-          envolvido, o caminho correto Ã© estornar as movimentaÃ§Ãµes, nÃ£o apagar o tÃ­tulo.
+          Como as movimentações têm chave estrangeira para o título, um título que já foi
+          pago não pode ser apagado. Para desfazer um compromisso que teve dinheiro
+          envolvido, o caminho correto é estornar as movimentações, não apagar o título.
 
           Se o compromisso apenas deixou de existir, use `/cancelar`.
 
-          **Erros:** 404 se o id nÃ£o existir; 422 se houver movimentaÃ§Ãµes vinculadas.
+          **Erros:** 404 se o id não existir; 422 se houver movimentações vinculadas.
           """)
   @DeleteMapping("/{id}")
   public ResponseEntity<Void> remover(@PathVariable Long id) {
