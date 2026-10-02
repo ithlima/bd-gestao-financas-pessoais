@@ -24,86 +24,15 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/**
- * Centraliza o tratamento de exceções de <b>todos</b> os controllers.
- *
- * <h2>Princípio: nenhum erro sem explicação</h2>
- *
- * <p>O objetivo desta classe é que <b>nenhuma</b> falha chegue ao cliente como um
- * "erro interno" genérico. Cada situação tem um status HTTP correto e uma
- * mensagem que diz o que aconteceu e, quando possível, o que fazer.
- *
- * <p>Um detalhe importante aprendido na prática: um {@code @ExceptionHandler}
- * genérico para {@code Exception} <b>atrapalha</b> quando é largo demais. O Spring
- * já trata corretamente vários erros do cliente (JSON malformado, parâmetro
- * faltando, rota inexistente) e o handler genérico os rebaixa para 500, perdendo
- * a informação. Por isso os casos específicos abaixo existem: eles têm precedência
- * sobre o genérico.
- *
- * <h2>Mapa completo</h2>
- *
- * <table border="1">
- *   <caption>Exceção para status HTTP</caption>
- *   <tr><th>Exceção</th><th>HTTP</th><th>Quando ocorre</th></tr>
- *   <tr><td>{@link MethodArgumentNotValidException}</td><td>400</td>
- *       <td>Bean Validation reprovou um campo do corpo</td></tr>
- *   <tr><td>{@link ConstraintViolationException}</td><td>400</td>
- *       <td>validação em parâmetro de método</td></tr>
- *   <tr><td>{@link HttpMessageNotReadableException}</td><td>400</td>
- *       <td>JSON malformado, enum ou data inválidos no corpo</td></tr>
- *   <tr><td>{@link MethodArgumentTypeMismatchException}</td><td>400</td>
- *       <td>parâmetro de query/rota com tipo inválido</td></tr>
- *   <tr><td>{@link MissingServletRequestParameterException}</td><td>400</td>
- *       <td>parâmetro obrigatório ausente</td></tr>
- *   <tr><td>{@link RecursoNaoEncontradoException}</td><td>404</td>
- *       <td>id inexistente</td></tr>
- *   <tr><td>{@link NoResourceFoundException} / {@link NoHandlerFoundException}</td><td>404</td>
- *       <td>rota inexistente</td></tr>
- *   <tr><td>{@link HttpRequestMethodNotSupportedException}</td><td>405</td>
- *       <td>verbo HTTP não suportado pela rota</td></tr>
- *   <tr><td>{@link RecursoDuplicadoException}</td><td>409</td>
- *       <td>e-mail/nome repetido</td></tr>
- *   <tr><td>{@link RecursoEmUsoException}</td><td>409</td>
- *       <td>exclusão bloqueada por registros dependentes</td></tr>
- *   <tr><td>{@link DataIntegrityViolationException}</td><td>409</td>
- *       <td>violação de FK ou de unicidade detectada pelo banco</td></tr>
- *   <tr><td>{@link RegraNegocioException}</td><td>422</td>
- *       <td>regra de domínio violada</td></tr>
- *   <tr><td>{@code Exception}</td><td>500</td>
- *       <td>erro realmente inesperado (não vaza detalhe interno)</td></tr>
- * </table>
- */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
   private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
-  /**
-   * Log de detalhe técnico para erros do cliente.
-   *
-   * <p>Separado do log de erro: um JSON malformado é culpa de quem chamou a API e
-   * não deve poluir o log de erros do servidor. Mas o detalhe cru precisa ficar
-   * registrado em algum lugar, já que não é enviado ao cliente.
-   */
   private static final Logger registro = LoggerFactory.getLogger("com.example.financas.api");
 
-  /**
-   * Extrai o nome da constraint citado pelo banco.
-   *
-   * <p>Exemplo: {@code constraint [fk_titulo_categoria]} → {@code fk_titulo_categoria}
-   */
   private static final Pattern NOME_DA_CONSTRAINT = Pattern.compile("constraint \\[([^\\]]+)]");
 
-  // ==================================================================
-  // 400 — erros do cliente no corpo da requisição
-  // ==================================================================
-
-  /**
-   * Bean Validation reprovou um ou mais campos do corpo.
-   *
-   * <p>Devolve <b>todos</b> os campos reprovados de uma vez, e não apenas o
-   * primeiro — assim o cliente corrige tudo em uma única passada.
-   */
   @ExceptionHandler(MethodArgumentNotValidException.class)
   public ResponseEntity<ErroResponse> tratarCorpoInvalido(
       MethodArgumentNotValidException ex, HttpServletRequest request) {
@@ -121,7 +50,6 @@ public class GlobalExceptionHandler {
         detalhes);
   }
 
-  /** Validação de parâmetro de método (ex.: {@code @Validated} em query params). */
   @ExceptionHandler(ConstraintViolationException.class)
   public ResponseEntity<ErroResponse> tratarViolacaoDeConstraint(
       ConstraintViolationException ex, HttpServletRequest request) {
@@ -143,29 +71,6 @@ public class GlobalExceptionHandler {
     return violacao.getPropertyPath() + ": " + violacao.getMessage();
   }
 
-  // ==================================================================
-  // 400 — erros do cliente no formato dos dados
-  // ==================================================================
-
-  /**
-   * O corpo da requisição não pôde ser lido.
-   *
-   * <p>Cobre três casos comuns, e a mensagem é traduzida para cada um:
-   *
-   * <ul>
-   *   <li><b>JSON malformado</b> — chave não fechada, vírgula sobrando;</li>
-   *   <li><b>valor de enum inválido</b> — ex.: {@code "tipo": "INVALIDO"};</li>
-   *   <li><b>data inválida</b> — ex.: {@code "31/02/2026"} no lugar de
-   *       {@code "2026-02-28"}.</li>
-   * </ul>
-   *
-   * <p>A mensagem crua do Jackson é registrada no <b>log do servidor</b>, mas não
-   * é enviada ao cliente: além de citar classes Java internas, ela contém
-   * deslocamentos de byte e detalhes de configuração da biblioteca
-   * ({@code StreamReadFeature}, {@code REDACTED}) que não ajudam quem consome a
-   * API — e revelam estrutura interna. Mesma decisão tomada para o erro de banco
-   * de dados.
-   */
   @ExceptionHandler(HttpMessageNotReadableException.class)
   public ResponseEntity<ErroResponse> tratarCorpoIlegivel(
       HttpMessageNotReadableException ex, HttpServletRequest request) {
@@ -181,23 +86,11 @@ public class GlobalExceptionHandler {
     return erro(HttpStatus.BAD_REQUEST, "Requisição inválida", mensagem, request, List.of());
   }
 
-  /**
-   * Traduz a mensagem crua do Jackson para uma explicação útil.
-   *
-   * <p>A ordem das verificações importa, e o texto procurado é generoso de
-   * propósito: o Jackson 2 e o Jackson 3 descrevem o mesmo erro de formas
-   * diferentes. Uma data inválida, por exemplo, aparece como
-   * {@code Text '31/02/2026' could not be parsed} no Jackson 2 e como
-   * {@code Failed to deserialize java.time.LocalDate} no Jackson 3. Procurar
-   * apenas uma das formas deixaria o outro caso cair na mensagem genérica.
-   */
   private String traduzirErroDeLeitura(String causa) {
     if (causa == null) {
       return "O corpo da requisição não pôde ser lido";
     }
 
-    // Corpo ausente. A mensagem crua cita a assinatura completa do método do
-    // controller; o cliente só precisa saber que faltou enviar o corpo.
     if (causa.contains("Required request body is missing")) {
       return "O corpo da requisição é obrigatório e não foi enviado";
     }
@@ -207,8 +100,6 @@ public class GlobalExceptionHandler {
       return "Valor inválido para um campo de opções. Valores aceitos: " + aceitos;
     }
 
-    // Data: cobre Jackson 2 (DateTimeParseException, could not be parsed) e
-    // Jackson 3 (Failed to deserialize java.time.LocalDate, ValueInstant).
     if (causa.contains("LocalDate")
         || causa.contains("LocalDateTime")
         || causa.contains("DateTimeParseException")
@@ -226,20 +117,12 @@ public class GlobalExceptionHandler {
     return "O corpo da requisição não pôde ser lido";
   }
 
-  /** Extrai o primeiro trecho de texto entre dois delimitadores. */
   private String extrairEntre(String texto, String abre, String fecha) {
     int i = texto.indexOf(abre);
     int f = texto.indexOf(fecha, i + 1);
     return (i >= 0 && f > i) ? texto.substring(i + 1, f) : "desconhecidos";
   }
 
-  /**
-   * Parâmetro de query ou de rota com valor que não pode ser convertido para o
-   * tipo esperado.
-   *
-   * <p>Exemplo: {@code ?tipo=XYZ}, quando os valores válidos são
-   * {@code RECEITA} e {@code DESPESA}.
-   */
   @ExceptionHandler(MethodArgumentTypeMismatchException.class)
   public ResponseEntity<ErroResponse> tratarTipoDeParametroInvalido(
       MethodArgumentTypeMismatchException ex, HttpServletRequest request) {
@@ -265,7 +148,6 @@ public class GlobalExceptionHandler {
             + ", esperado: " + tipoEsperado));
   }
 
-  /** Parâmetro obrigatório não informado na chamada. */
   @ExceptionHandler(MissingServletRequestParameterException.class)
   public ResponseEntity<ErroResponse> tratarParametroAusente(
       MissingServletRequestParameterException ex, HttpServletRequest request) {
@@ -278,24 +160,12 @@ public class GlobalExceptionHandler {
             + ex.getParameterType()));
   }
 
-  // ==================================================================
-  // 404 — recurso ou rota inexistente
-  // ==================================================================
-
   @ExceptionHandler(RecursoNaoEncontradoException.class)
   public ResponseEntity<ErroResponse> tratarNaoEncontrado(
       RecursoNaoEncontradoException ex, HttpServletRequest request) {
     return erro(HttpStatus.NOT_FOUND, "Recurso não encontrado", ex.getMessage(), request, List.of());
   }
 
-  /**
-   * Rota inexistente.
-   *
-   * <p>No Spring Boot 4, uma URL que não corresponde a nenhum endpoint é tratada
-   * como "recurso estático não encontrado" ({@link NoResourceFoundException}), e
-   * não como {@code NoHandlerFoundException}. As duas são tratadas aqui porque a
-   * segunda ainda pode ocorrer conforme a configuração.
-   */
   @ExceptionHandler({NoResourceFoundException.class, NoHandlerFoundException.class})
   public ResponseEntity<ErroResponse> tratarRotaInexistente(
       Exception ex, HttpServletRequest request) {
@@ -308,17 +178,6 @@ public class GlobalExceptionHandler {
         List.of("Consulte a documentação da API para ver as rotas disponíveis"));
   }
 
-  // ==================================================================
-  // 405 — método HTTP não suportado
-  // ==================================================================
-
-  /**
-   * O verbo HTTP não é aceito pela rota.
-   *
-   * <p>Exemplo: {@code DELETE /api/v1/movimentacoes/1}. A rota existe, mas uma
-   * movimentação é um fato consumado e não pode ser apagada (RN20) — por isso não
-   * há {@code DELETE} mapeado.
-   */
   @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
   public ResponseEntity<ErroResponse> tratarMetodoNaoSuportado(
       HttpRequestMethodNotSupportedException ex, HttpServletRequest request) {
@@ -337,10 +196,6 @@ public class GlobalExceptionHandler {
         List.of("rota: " + request.getRequestURI()));
   }
 
-  // ==================================================================
-  // 409 — conflito com o estado atual dos dados
-  // ==================================================================
-
   @ExceptionHandler(RecursoDuplicadoException.class)
   public ResponseEntity<ErroResponse> tratarDuplicado(
       RecursoDuplicadoException ex, HttpServletRequest request) {
@@ -353,23 +208,6 @@ public class GlobalExceptionHandler {
     return erro(HttpStatus.CONFLICT, "Recurso em uso", ex.getMessage(), request, List.of());
   }
 
-  /**
-   * Violação de integridade detectada pelo <b>banco de dados</b>.
-   *
-   * <p>É a última linha de defesa. Os services validam antes de tentar gravar, mas
-   * entre a validação e o {@code DELETE} alguém pode ter inserido uma linha
-   * dependente — e é o banco que recusa. Sem este tratador, o erro viraria um 500
-   * e a mensagem do banco seria repassada ao cliente, incluindo o SQL executado:
-   *
-   * <pre>
-   *   could not execute statement [...] SQL [delete from usuario where id_usuario=?]
-   *   constraint [fk_categoria_usuario]
-   * </pre>
-   *
-   * <p>Isso expõe estrutura interna sem ajudar quem chamou a API. Aqui o nome da
-   * constraint é traduzido para uma frase que explica a relação que bloqueou a
-   * operação.
-   */
   @ExceptionHandler(DataIntegrityViolationException.class)
   public ResponseEntity<ErroResponse> tratarIntegridade(
       DataIntegrityViolationException ex, HttpServletRequest request) {
@@ -390,17 +228,10 @@ public class GlobalExceptionHandler {
     if (matcher.find()) {
       return matcher.group(1);
     }
-    // Violações de unicidade nem sempre citam a constraint.
+
     return texto.contains("Duplicate entry") ? "restricao de unicidade" : "desconhecida";
   }
 
-  /**
-   * Traduz o nome técnico da constraint para uma explicação útil.
-   *
-   * <p>O nome segue o padrão adotado no projeto ({@code fk_<tabela>_<referencia>} e
-   * {@code uq_<tabela>_<colunas>}), o que permite montar a mensagem sem consultar
-   * o banco.
-   */
   private String traduzirConstraint(String nome) {
     if (nome == null) {
       return "A operação viola uma regra de integridade do banco de dados";
@@ -428,10 +259,6 @@ public class GlobalExceptionHandler {
     };
   }
 
-  // ==================================================================
-  // 422 — regra de negócio
-  // ==================================================================
-
   @ExceptionHandler(RegraNegocioException.class)
   public ResponseEntity<ErroResponse> tratarRegraNegocio(
       RegraNegocioException ex, HttpServletRequest request) {
@@ -443,22 +270,6 @@ public class GlobalExceptionHandler {
         List.of());
   }
 
-  // ==================================================================
-  // 500 — erro realmente inesperado
-  // ==================================================================
-
-  /**
-   * Última rede de proteção.
-   *
-   * <p><b>Só deve ser alcançado por defeitos reais</b> — não por erro do cliente.
-   * Se um erro do cliente chegar aqui, é sinal de que falta um tratador
-   * específico acima.
-   *
-   * <p>A mensagem devolvida é <b>deliberadamente genérica</b>: a causa completa é
-   * registrada no log do servidor, mas não é enviada ao cliente, porque pode
-   * conter SQL, nomes de tabelas e caminhos internos. Quem depurar o problema usa
-   * o log; quem consome a API recebe uma resposta honesta e sem vazamento.
-   */
   @ExceptionHandler(Exception.class)
   public ResponseEntity<ErroResponse> tratarErroInesperado(
       Exception ex, HttpServletRequest request) {
@@ -478,10 +289,6 @@ public class GlobalExceptionHandler {
         request,
         List.of());
   }
-
-  // ==================================================================
-  // Apoio
-  // ==================================================================
 
   private ResponseEntity<ErroResponse> erro(
       HttpStatusCode status,

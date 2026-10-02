@@ -20,37 +20,6 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
-/**
- * Regras de negócio do <b>título</b> — o compromisso financeiro previsto.
- *
- * <p><b>O ponto mais importante desta classe:</b> nenhum método aqui cria uma
- * despesa. Cadastrar um título <i>não</i> movimenta dinheiro e <i>não</i> altera a
- * DRE realizada. O título só passa a valer como receita ou despesa realizada
- * quando é quitado — e quem cria a movimentação correspondente é o
- * {@link MovimentacaoService#registrarQuitacaoDeTitulo(NovaMovimentacao)}.
- *
- * <p>Daí decorre a regra central do sistema:
- *
- * <pre>
- *   DRE PREVISTA   -> lê titulo (por data_vencimento)      [regime de competência]
- *   DRE REALIZADA  -> lê movimentacao (por data)           [regime de caixa]
- * </pre>
- *
- * <p>É esse desenho que impede uma conta ainda não paga de ser contada como
- * despesa efetivamente realizada.
- *
- * <h2>Sobre as dependências</h2>
- *
- * <p>Este service depende de {@link MovimentacaoService} e <b>não</b> o
- * contrário. O {@code MovimentacaoService} não tem nenhuma referência de volta,
- * o que evita um ciclo de beans — ciclo esse que o Spring recusa criar por
- * padrão, e com razão: dois services que se conhecem mutuamente geralmente
- * indicam que a fronteira entre eles está mal traçada.
- *
- * <p>Foi por isso que as consultas a movimentações saíram daqui: tudo que lê
- * {@code movimentacao} pertence ao {@code MovimentacaoService}, e o
- * {@code TituloService} apenas pede a informação pronta.
- */
 @Service
 public class TituloService {
 
@@ -73,10 +42,6 @@ public class TituloService {
     this.movimentacaoService = movimentacaoService;
   }
 
-  // ------------------------------------------------------------------
-  // Consultas
-  // ------------------------------------------------------------------
-
   @Transactional(readOnly = true)
   public List<TituloResponse> listar(
       Long usuarioId, TipoMovimentacao tipo, SituacaoTitulo situacao) {
@@ -98,13 +63,6 @@ public class TituloService {
     return toResponse(buscarEntidade(id));
   }
 
-  /**
-   * Títulos <b>pendentes já vencidos</b>.
-   *
-   * <p>O filtro é {@code situacao = PENDENTE} no banco, e a condição "vencido" é
-   * derivada em memória. Um título cancelado não é atraso; um título quitado
-   * também não.
-   */
   @Transactional(readOnly = true)
   public List<TituloResponse> listarVencidos(Long usuarioId, LocalDate referencia) {
     return listarEntidadesVencidas(usuarioId, referencia).stream()
@@ -112,7 +70,6 @@ public class TituloService {
         .toList();
   }
 
-  /** Títulos pendentes já vencidos, como entidades — usado pela DRE. */
   @Transactional(readOnly = true)
   public List<Titulo> listarEntidadesVencidas(Long usuarioId, LocalDate referencia) {
     return tituloRepository
@@ -120,29 +77,16 @@ public class TituloService {
             usuarioId, SituacaoTitulo.PENDENTE, referencia);
   }
 
-  /** Agregação da DRE prevista (soma por categoria, por vencimento). */
   @Transactional(readOnly = true)
   public List<DrePrevisaoProjection> somarPrevistoPorCategoria(
       Long usuarioId, LocalDate inicio, LocalDate fim) {
     return tituloRepository.somarPrevistoPorCategoria(usuarioId, inicio, fim);
   }
 
-  // ------------------------------------------------------------------
-  // CRUD
-  // ------------------------------------------------------------------
-
-  /**
-   * Cadastra um título (RN01 a RN04).
-   *
-   * <p>O título nasce {@code PENDENTE}. Nenhuma movimentação é criada e nenhuma
-   * despesa aparece na DRE realizada — o compromisso apenas passa a existir como
-   * previsão.
-   */
   @Transactional
   public TituloResponse criar(TituloRequest request) {
     Usuario usuario = usuarioService.buscarEntidade(request.usuarioId());
 
-    // RN03: categoria do mesmo usuário e do mesmo tipo do título.
     Categoria categoria =
         categoriaService.validarCategoriaDoLancamento(
             request.categoriaId(), request.usuarioId(), request.tipo(), "título");
@@ -172,8 +116,6 @@ public class TituloService {
           "Um título já quitado não pode ser alterado. Registre um novo lançamento, se necessário");
     }
 
-    // O tipo não pode mudar: ele define a direção do dinheiro e já está impresso
-    // na categoria do título. Para mudar a direção, cadastre outro título.
     if (titulo.getTipo() != request.tipo()) {
       throw new RegraNegocioException(
           "O tipo de um título existente não pode ser alterado (era "
@@ -183,7 +125,6 @@ public class TituloService {
 
     BigDecimal jaRealizado = movimentacaoService.totalRealizadoDoTitulo(id);
 
-    // Não se pode reduzir o valor previsto abaixo do que já foi pago.
     if (request.valorPrevisto().compareTo(jaRealizado) < 0) {
       throw new RegraNegocioException(
           "O novo valor previsto (R$ "
@@ -206,14 +147,6 @@ public class TituloService {
     return toResponse(tituloRepository.save(titulo));
   }
 
-  /**
-   * Cancela um título (RN05, RN07).
-   *
-   * <p>Só é permitido se <b>nada</b> foi realizado. Se já houve pagamento, o
-   * dinheiro efetivamente se moveu e não se pode simplesmente apagar o
-   * compromisso — seria preciso estornar a movimentação primeiro. Essa restrição
-   * é o que garante que o histórico do caixa nunca fique inconsistente.
-   */
   @Transactional
   public TituloResponse cancelar(Long id) {
     Titulo titulo = buscarEntidade(id);
@@ -238,15 +171,6 @@ public class TituloService {
     return toResponse(tituloRepository.save(titulo));
   }
 
-  /**
-   * Remove um título do banco.
-   *
-   * <p><b>Atenção:</b> como as movimentações têm chave estrangeira para o título,
-   * um título que já foi pago não pode ser apagado — o banco recusaria a
-   * operação. Para desfazer um compromisso que teve dinheiro envolvido, o caminho
-   * correto é estornar as movimentações, não apagar o título. A verificação aqui
-   * existe para devolver uma mensagem clara em vez de um erro de integridade.
-   */
   @Transactional
   public void remover(Long id) {
     Titulo titulo = buscarEntidade(id);
@@ -259,31 +183,11 @@ public class TituloService {
     tituloRepository.delete(titulo);
   }
 
-  // ------------------------------------------------------------------
-  // Quitação — pagar / receber
-  // ------------------------------------------------------------------
-
-  /**
-   * Registra o <b>pagamento</b> de um título de despesa.
-   *
-   * @param id título a pagar
-   * @param valor valor pago nesta operação (pode ser parcial)
-   * @param data data em que o pagamento aconteceu
-   * @param contaId conta de onde o dinheiro saiu
-   */
   @Transactional
   public TituloResponse pagar(Long id, BigDecimal valor, LocalDate data, Long contaId) {
     return quitar(id, valor, data, contaId, TipoMovimentacao.DESPESA);
   }
 
-  /**
-   * Registra o <b>recebimento</b> de um título de receita.
-   *
-   * <p>É a operação espelho de {@link #pagar}. Ambas chamam a mesma rotina
-   * interna, porque a única diferença é a direção do dinheiro — que já está no
-   * {@code tipo} do título. No modelo antigo, essa mesma lógica existia
-   * duplicada em duas entidades ({@code Recebimento} e {@code Pagamento}).
-   */
   @Transactional
   public TituloResponse receber(Long id, BigDecimal valor, LocalDate data, Long contaId) {
     return quitar(id, valor, data, contaId, TipoMovimentacao.RECEITA);
@@ -303,8 +207,6 @@ public class TituloService {
               + " para quitá-lo");
     }
 
-    // A validação e a criação da movimentação acontecem no MovimentacaoService,
-    // que é o dono das regras de movimentação. Aqui só se delega.
     movimentacaoService.registrarQuitacaoDeTitulo(
         new NovaMovimentacao(titulo, valor, data, contaService.validarContaDoUsuario(
             contaId, titulo.getUsuario().getIdUsuario())));
@@ -312,18 +214,6 @@ public class TituloService {
     return toResponse(titulo);
   }
 
-  // ------------------------------------------------------------------
-  // Regras compartilhadas com o MovimentacaoService
-  // ------------------------------------------------------------------
-
-  /**
-   * Valida se o título pode receber uma quitação de {@code valor} (RN05, RN06,
-   * RN09).
-   *
-   * <p>Público porque o {@link MovimentacaoService} reaplica essas regras no
-   * momento de criar a movimentação. Concentrar a verificação aqui evita que ela
-   * exista em dois lugares com textos diferentes.
-   */
   public void validarQuitacao(Titulo titulo, BigDecimal valor) {
     if (titulo.getSituacao() == SituacaoTitulo.CANCELADO) {
       throw new RegraNegocioException("Um título cancelado não pode ser pago ou recebido");
@@ -345,14 +235,6 @@ public class TituloService {
     }
   }
 
-  /**
-   * Recalcula a situação do título depois de uma quitação (RN09, RN10).
-   *
-   * <p>Se a soma das movimentações atingiu o valor previsto, o título vira
-   * {@code PAGO} e recebe a data de quitação. Se ainda falta, permanece
-   * {@code PENDENTE} — é o caso do <b>pagamento parcial</b>, em que o título
-   * continua em aberto exibindo o quanto falta.
-   */
   @Transactional
   public void atualizarSituacaoAposQuitacao(Titulo titulo) {
     BigDecimal realizado = movimentacaoService.totalRealizadoDoTitulo(titulo.getIdTitulo());
@@ -366,23 +248,17 @@ public class TituloService {
     }
   }
 
-  // ------------------------------------------------------------------
-  // Apoio
-  // ------------------------------------------------------------------
-
   public Titulo buscarEntidade(Long id) {
     return tituloRepository
         .findById(id)
         .orElseThrow(() -> RecursoNaoEncontradoException.porId("Título", id, false));
   }
 
-  /** Soma dos valores já realizados de um título. */
   @Transactional(readOnly = true)
   public BigDecimal totalRealizadoDoTitulo(Long tituloId) {
     return movimentacaoService.totalRealizadoDoTitulo(tituloId);
   }
 
-  /** Monta o DTO do título com os valores calculados. */
   private TituloResponse toResponse(Titulo titulo) {
     return TituloMapper.toResponse(
         titulo,

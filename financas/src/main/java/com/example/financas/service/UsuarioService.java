@@ -17,20 +17,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
-/**
- * Regras de negócio de usuário.
- *
- * <p>Esta classe concentra a única regra que existia documentada na modelagem
- * original e que <b>não estava implementada</b>: o e-mail precisa ser único.
- * A restrição {@code UNIQUE} do banco é a última linha de defesa; aqui a
- * validação acontece antes, para devolver uma mensagem útil em vez de um erro
- * de banco.
- *
- * <p>Além dos dados do próprio usuário, este service precisa consultar títulos,
- * movimentações, contas e categorias por um motivo específico: explicar por que
- * um usuário não pode ser excluído, informando <b>quantos</b> registros dependem
- * dele.
- */
 @Service
 public class UsuarioService {
 
@@ -40,7 +26,6 @@ public class UsuarioService {
   private final ContaRepository contaRepository;
   private final CategoriaRepository categoriaRepository;
 
-  /** Injeção por construtor: dependência obrigatória, testável sem reflexão. */
   public UsuarioService(
       UsuarioRepository usuarioRepository,
       TituloRepository tituloRepository,
@@ -83,7 +68,6 @@ public class UsuarioService {
   public UsuarioResponse atualizar(Long id, UsuarioRequest request) {
     Usuario usuario = buscarEntidade(id);
 
-    // Se o e-mail mudou, precisa ser único entre os demais usuários.
     if (!usuario.getEmail().equals(request.email())
         && usuarioRepository.existsByEmail(request.email())) {
       throw new RecursoDuplicadoException("Já existe um usuário com o e-mail " + request.email());
@@ -97,14 +81,6 @@ public class UsuarioService {
     return UsuarioMapper.toResponse(usuarioRepository.save(usuario));
   }
 
-  /**
-   * Remove um usuário, se não houver nada vinculado a ele.
-   *
-   * <p>A verificação existe para dar uma mensagem útil. O banco recusaria de
-   * qualquer forma, pelas chaves estrangeiras — o que é a garantia final —, mas a
-   * mensagem dele citaria o SQL executado, sem dizer ao usuário o que fazer.
-   * Aqui se informa <b>quantos</b> registros dependem dele.
-   */
   @Transactional
   public void remover(Long id) {
     Usuario usuario = buscarEntidade(id);
@@ -132,13 +108,6 @@ public class UsuarioService {
     usuarioRepository.delete(usuario);
   }
 
-  /**
-   * Carrega a entidade ou falha com 404.
-   *
-   * <p>Método público porque os outros services precisam resolver um usuário a
-   * partir do id recebido no request, e reaproveitar esta busca garante que
-   * todos produzam a mesma mensagem de erro.
-   */
   public Usuario buscarEntidade(Long id) {
     return usuarioRepository
         .findById(id)

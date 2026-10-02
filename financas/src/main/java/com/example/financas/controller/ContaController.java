@@ -15,13 +15,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-/**
- * Endpoints de contas financeiras.
- *
- * <p>Além do CRUD, expõe o saldo atual de cada conta e o extrato (as
- * movimentações realizadas na conta). Os dois só são triviais de calcular porque
- * {@code movimentacao.conta_id} é obrigatório no novo modelo.
- */
 @Tag(
     name = "Contas",
     description = "Onde o dinheiro está. O saldo é **calculado**, não armazenado.")

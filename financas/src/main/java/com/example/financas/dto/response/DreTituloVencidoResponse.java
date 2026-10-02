@@ -7,7 +7,6 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-/** Título pendente com vencimento já ultrapassado, exibido dentro da DRE. */
 public record DreTituloVencidoResponse(
     Long idTitulo,
     String descricao,

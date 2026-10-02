@@ -1,0 +1,16 @@
+﻿# Arquivos de IDE e ambiente local
+
+.vscode/
+.idea/
+*.iml
+*.iws
+*.ipr
+.classpath
+.project
+.settings/
+.factorypath
+.springBeans
+.sts4-cache
+
+target/
+*.log

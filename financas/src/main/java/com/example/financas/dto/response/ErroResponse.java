@@ -6,22 +6,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDateTime;
 import java.util.List;
 
-/**
- * Formato único de resposta de erro da API.
- *
- * <p>Ter um único formato evita que o cliente receba, às vezes, o JSON padrão do
- * Spring e, às vezes, um JSON próprio. Além da mensagem, {@code detalhes} carrega
- * os erros de validação campo a campo — útil para o front-end destacar o campo
- * problemático.
- *
- * <p>A anotação {@code @Schema} abaixo é o que garante que este DTO apareça no
- * contrato OpenAPI. Sem ela, ele ficaria de fora: o springdoc registra o schema de
- * um tipo apenas quando alguma operação documentada o <b>referencia</b>, e este
- * tipo só era usado pelo {@code GlobalExceptionHandler} — que não é um
- * controller. O resultado era um Swagger que mostrava apenas os caminhos de
- * sucesso e escondia o formato de erro, justamente a parte que quem consome a API
- * mais precisa consultar.
- */
 @Schema(
     name = "ErroResponse",
     description =

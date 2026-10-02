@@ -11,28 +11,6 @@ import org.springframework.context.annotation.Configuration;
 
 import java.util.List;
 
-/**
- * Configuração da documentação interativa da API (OpenAPI 3 + Swagger UI).
- *
- * <p>Com esta configuração, o contrato da API é <b>gerado a partir do código</b>
- * — dos controllers, dos DTOs e das anotações de validação. Não existe um arquivo
- * YAML escrito à mão que possa ficar desatualizado em relação ao que o sistema
- * realmente faz; se um endpoint mudar, a documentação muda junto.
- *
- * <p>Endereços:
- *
- * <ul>
- *   <li><b>Swagger UI</b> — {@code http://localhost:8080/swagger-ui.html}
- *       (para exercitar a API pelo navegador);</li>
- *   <li><b>Contrato OpenAPI</b> — {@code http://localhost:8080/v3/api-docs}
- *       (JSON consumível por ferramentas como Postman e Insomnia).</li>
- * </ul>
- *
- * <p>A ordem das tags abaixo não é decorativa: ela define a ordem em que os
- * grupos de endpoints aparecem na interface. A sequência segue a ordem natural de
- * uso do sistema — primeiro as entidades básicas (usuário, conta, categoria),
- * depois títulos e movimentações, e por fim os relatórios.
- */
 @Configuration
 public class OpenApiConfig {
 
@@ -95,8 +73,7 @@ public class OpenApiConfig {
                     """)
                 .contact(new Contact().name("Projeto acadêmico").url("https://github.com/ithlima/bd-gestao-financas-pessoais"))
                 .license(new License().name("Projeto acadêmico")))
-        // Components vazio hoje, mas deixa o ponto de extensão pronto para quando
-        // houver esquema de segurança (o SecurityConfig é o lugar onde isso muda).
+
         .components(new Components())
         .tags(
             List.of(

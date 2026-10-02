@@ -19,8 +19,8 @@ ambiguidade, "quanto eu ainda tenho para pagar?" e "quanto eu realmente gastei?"
 - [A DRE](#a-dre)
 - [Endpoints da API](#endpoints-da-api)
 - [Contas a pagar e a receber](#contas-a-pagar-e-a-receber)
-- [Exemplo de uso ponta a ponta](#exemplo-de-uso-ponta-a-ponta)
-- [Como executar](#como-executar)
+- [Exemplo ponta a ponta (requisições reais)](#exemplo-ponta-a-ponta-requisições-reais)
+- [Como usar](#como-usar)
 - [Documentação interativa (Swagger)](#documentação-interativa-swagger)
 - [Testes](#testes)
 - [Tratamento de erros](#tratamento-de-erros)
@@ -593,9 +593,9 @@ enganoso. Para o dinheiro que já está na conta, use `GET /api/v1/contas?usuari
 
 ---
 
-## Exemplo de uso ponta a ponta
+## Exemplo ponta a ponta (requisições reais)
 
-O caso do enunciado: *"Tenho uma conta de energia de R$ 150,00 que vence dia 10."*
+A sequência conceitual está em [Como usar](#como-usar). Aqui ela aparece como requisições reais, usando o caso do enunciado: *"Tenho uma conta de energia de R$ 150,00 que vence dia 10."*
 
 **1. Criar usuário, conta e categoria**
 
@@ -675,15 +675,18 @@ A DRE realizada reflete os R$ 600,00 já pagos — proporcionalmente, sem escond
 
 ---
 
-## Como executar
+## Como usar
 
-### 1. Banco de dados
+Esta seção explica **como o sistema funciona por dentro** e como operá-lo no dia a dia, do
+banco vazio até a DRE pronta.
+
+### 1. Preparar o banco
 
 ```sql
 CREATE DATABASE financas CHARACTER SET utf8mb4;
 ```
 
-### 2. Configuração
+### 2. Configurar a conexão
 
 Edite `financas/src/main/resources/application.properties`:
 
@@ -695,24 +698,23 @@ spring.datasource.password=SUA_SENHA
 
 > Não versione credenciais reais.
 
-### 3. Escolha o caminho do schema
+### 3. Criar as tabelas
 
-**Projeto novo (ou migrando do modelo antigo):** aplique o script de migração, que registra a
-evolução do modelo de forma explícita e reproduzível:
+Há dois caminhos, e eles se complementam:
+
+**a) Script de migração (recomendado).** Registra a evolução do modelo de forma explícita e
+reproduzível, e cria os `CHECK` que o Hibernate não gera:
 
 ```bash
 mariadb -u root -p financas < financas/src/main/resources/db/migration/V2__evolucao_dre_titulos.sql
 ```
 
-O script remove `recebimento` e `pagamento`, amplia `categoria.nome` para `VARCHAR(100)`, cria
-`titulo` com seus `CHECK` e índices, e acrescenta `conta_id`/`titulo_id` em `movimentacao`.
+**b) Deixar o Hibernate criar.** Com `spring.jpa.hibernate.ddl-auto=update`, subir a aplicação
+já cria as tabelas a partir das entidades. É mais simples, mas o Hibernate **não cria os
+`CHECK`** de `valor > 0` — nesse caminho, essas regras passam a valer apenas na camada de
+serviço.
 
-**Banco vazio, sem se preocupar com o SQL:** basta subir a aplicação — com
-`spring.jpa.hibernate.ddl-auto=update`, o Hibernate cria as tabelas a partir das entidades.
-A diferença é que o Hibernate **não cria os `CHECK`** de `valor > 0`, então as regras passam a
-valer apenas na camada de serviço.
-
-### 4. Executar
+### 4. Subir a aplicação
 
 ```bash
 cd financas
@@ -724,7 +726,134 @@ mvnw.cmd spring-boot:run
 ./mvnw spring-boot:run
 ```
 
-A API sobe em `http://localhost:8080`.
+A API sobe em `http://localhost:8080` e a documentação interativa em
+`http://localhost:8080/swagger-ui.html`.
+
+### 5. Popular com dados de exemplo (opcional)
+
+Para não começar com o banco vazio, há um script com um cenário completo — salário, freelance,
+aluguel, mercado, transporte e uma consulta médica pendente:
+
+```bash
+mariadb -u root -p financas < financas/src/main/resources/db/exemplo-dados.sql
+```
+
+Ele cria o usuário `ana@exemplo.com` (senha `segredo123`), duas contas, seis categorias, seis
+títulos e quatro movimentações. O resultado esperado, já verificado:
+
+| | Receitas | Despesas | Resultado |
+|---|---|---|---|
+| **DRE prevista** (por vencimento) | 6.200,00 | 2.850,00 | **+3.350,00** |
+| **DRE realizada** (por pagamento) | 5.000,00 | 2.600,00 | **+2.400,00** |
+
+E contas a pagar com **250,00** em aberto (a consulta médica).
+
+> O script apaga os dados existentes antes de inserir. Não use em banco com dados reais.
+
+### 6. O fluxo de uso
+
+O sistema tem **uma ordem de operações**, e entendê-la é entender o sistema:
+
+```text
+1. cadastrar usuário
+2. cadastrar contas        (onde o dinheiro está)
+3. cadastrar categorias    (como você classifica)
+        │
+        ▼
+4. CADASTRAR TÍTULO        ← a previsão. Nada acontece no caixa.
+        │
+        │  a DRE PREVISTA já mostra este valor
+        │  a DRE REALIZADA ainda mostra zero
+        ▼
+5. PAGAR ou RECEBER        ← a realização. Cria a movimentação.
+        │
+        ▼
+   a DRE REALIZADA passa a mostrar o valor,
+   na data do pagamento (não na do vencimento)
+```
+
+**Passo 1 — usuário.** É o dono de tudo. Contas, categorias, títulos e movimentações sempre
+pertencem a um usuário, e o `usuarioId` é informado nas chamadas.
+
+**Passo 2 — contas.** Representam onde o dinheiro está (conta corrente, poupança, carteira). O
+`saldoInicial` é o ponto de partida; o **saldo atual é calculado**, nunca gravado.
+
+**Passo 3 — categorias.** São a classificação, e viram as **linhas do relatório**. Cada uma tem
+um tipo, RECEITA ou DESPESA, e o tipo precisa combinar com o lançamento: uma despesa não pode
+ser classificada como "Salários". O sistema recusa isso com 422.
+
+**Passo 4 — títulos (a previsão).** Aqui está o conceito central. Um título é um **compromisso**:
+"tenho uma conta de energia de R$ 150 que vence dia 10".
+
+Cadastrar um título **não cria despesa**. Nenhum valor sai ou entra de conta alguma, e a DRE
+realizada continua zerada. O título aparece apenas na DRE **prevista**, que olha a data de
+vencimento.
+
+**Passo 5 — pagar ou receber (a realização).** Quando o dinheiro efetivamente se move, você
+registra o pagamento (`POST /titulos/{id}/pagar`) ou o recebimento (`/receber`), informando
+**quanto**, **quando** e **de qual conta**.
+
+É este passo que cria a **movimentação** — o evento que de fato aconteceu — e é ele que faz o
+valor aparecer na DRE realizada.
+
+**Passo 6 — consultar.** Com os dados lançados, os relatórios ficam disponíveis:
+
+| O que você quer saber | Endpoint |
+|---|---|
+| Como foi o mês (previsto × realizado) | `GET /api/v1/dre` |
+| Quanto ainda tenho a pagar | `GET /api/v1/contas-a-pagar` |
+| Quanto ainda tenho a receber | `GET /api/v1/contas-a-receber` |
+| Como está minha situação geral | `GET /api/v1/resumo-financeiro` |
+| Quanto tenho em cada conta | `GET /api/v1/contas?usuarioId=1` |
+
+### 7. O que o `modo` da DRE faz
+
+O endpoint da DRE aceita três valores, e cada um decide **quais valores saem** na resposta:
+
+| `modo` | Fonte | Data filtrada | O que traz |
+|---|---|---|---|
+| `previsto` | título | vencimento | só os valores previstos; os realizados vêm `null` |
+| `realizado` | movimentação | pagamento | só os valores realizados; os previstos vêm `null` |
+| `comparativo` | as duas | ambas | os dois lados + a variação (**padrão**) |
+
+Um `modo` desconhecido devolve **422** dizendo quais são aceitos.
+
+Use `previsto` para planejar ("o que eu esperava deste mês"), `realizado` para conferir o que
+aconteceu de fato, e `comparativo` para ver a diferença entre os dois.
+
+### 8. O que os relatórios mostram — e por que confiar neles
+
+A regra que sustenta tudo:
+
+> **Um título nunca entra na DRE realizada. Só a movimentação entra.**
+
+Na prática, com o cenário de exemplo: a consulta médica de R$ 250 aparece na DRE prevista e
+**não** na realizada, porque ainda não foi paga. No dia em que for paga, ela passa a compor o
+resultado realizado **na data do pagamento**, não na data do vencimento.
+
+Também vale saber:
+
+- **"PAGO" significa quitado**, não "teve algum pagamento". Aluguel de R$ 1.500 pago em duas
+  vezes fica PENDENTE até a soma atingir 1.500, e o quanto falta aparece em `valorEmAberto`.
+- **"VENCIDO" não é gravado no banco.** É calculado na hora da consulta: um título pendente cujo
+  vencimento já passou. Assim não existe rotina agendada para marcar atrasos, e nenhum relatório
+  fica errado se o sistema passar um fim de semana desligado.
+- **Títulos cancelados saem da previsão** e nunca chegaram a existir na realização.
+- **Movimentações não podem ser editadas nem excluídas.** São fatos consumados: o dinheiro já se
+  moveu. A API responde 405 explicando os métodos que aceita.
+
+### 9. Erros que você vai encontrar
+
+A API recusa o que viola o domínio, e explica o motivo. Os casos mais comuns:
+
+| Status | Quando | Exemplo de mensagem |
+|---|---|---|
+| **400** | dado malformado | `Data inválida. Use o formato ISO: AAAA-MM-DD` |
+| **404** | id inexistente | `Usuário não encontrado para o id 99` |
+| **409** | duplicado ou em uso | `Já existe uma categoria 'Moradia' para este usuário` |
+| **422** | regra de negócio | `O valor informado (R$ 200) é maior que o valor em aberto do título (R$ 150.00)` |
+
+O mapa completo está em [Tratamento de erros](#tratamento-de-erros).
 
 ---
 
@@ -740,20 +869,9 @@ Com a aplicação no ar, a API pode ser explorada e exercitada pelo navegador:
 O contrato é **gerado a partir do código** (controllers, DTOs e anotações de validação). Não
 existe um YAML escrito à mão que possa ficar desatualizado em relação ao que o sistema faz.
 
-### Sequência sugerida para testar
-
-1. `POST /api/v1/usuarios` — criar um usuário
-2. `POST /api/v1/contas` — criar uma conta (informe o `usuarioId`)
-3. `POST /api/v1/categorias` — criar ao menos uma de RECEITA e uma de DESPESA
-4. `POST /api/v1/titulos` — cadastrar uma previsão
-5. `GET /api/v1/dre` — conferir que a despesa aparece em **previsto** e **não** em realizado
-6. `POST /api/v1/titulos/{id}/pagar` — registrar o pagamento
-7. `GET /api/v1/dre` — conferir que agora aparece em **realizado**
-8. `GET /api/v1/contas-a-pagar` — ver a posição de contas a pagar
-
 Os endpoints estão agrupados em seis seções: **Usuários**, **Contas**, **Categorias**,
-**Títulos**, **Movimentações** e **Relatórios**. Cada operação documenta o que faz, quando usar,
-e quais status de erro pode devolver.
+**Títulos**, **Movimentações** e **Relatórios**. Cada operação documenta o que faz, quando usar
+e quais status de erro pode devolver. A ordem de uso está em [Como usar](#como-usar).
 
 ### Completude verificada por teste
 

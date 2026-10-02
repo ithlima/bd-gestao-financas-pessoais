@@ -14,15 +14,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-/**
- * Endpoints de categorias.
- *
- * <p>O filtro opcional {@code ?tipo=RECEITA|DESPESA} é útil para montar o
- * formulário de cadastro: ao escolher "Despesa", o cliente pede apenas as
- * categorias de despesa e evita que o usuário selecione uma categoria
- * incompatível — antecipando no front-end a validação que o service faz (RN03,
- * RN15).
- */
 @Tag(
     name = "Categorias",
     description = "Como o usuário classifica. É a categoria que forma as **linhas da DRE**.")

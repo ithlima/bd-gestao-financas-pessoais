@@ -13,18 +13,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
 
-/**
- * Endpoints de <b>contas a pagar</b> e <b>contas a receber</b>.
- *
- * <p>Estes endpoints não criam nada: são <b>visões</b> sobre os títulos que já
- * existem. Cadastrar, pagar, receber e cancelar continuam sendo operações de
- * {@code /api/v1/titulos} — este controller apenas responde "quanto está em
- * aberto e com que urgência".
- *
- * <p>A data de referência é um parâmetro em todos eles. Isso tem duas
- * utilidades: permite simular cenários ("como fica minha posição no fim do
- * mês?") e torna o comportamento testável sem depender do relógio da máquina.
- */
 @Tag(
     name = "Relatórios",
     description =

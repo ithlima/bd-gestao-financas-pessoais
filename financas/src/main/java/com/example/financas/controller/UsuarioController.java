@@ -13,14 +13,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-/**
- * Endpoints de usuário.
- *
- * <p>O controller é <b>fino</b> de propósito: ele só recebe a requisição, valida
- * o formato ({@code @Valid}) e delega ao service. Nenhuma regra de negócio mora
- * aqui. Isso permite trocar a interface (REST, CLI, mensageria) sem reescrever as
- * regras.
- */
 @Tag(name = "Usuários", description = "Cadastro dos donos dos dados financeiros.")
 @RestController
 @RequestMapping("/api/v1/usuarios")

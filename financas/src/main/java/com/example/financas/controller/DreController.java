@@ -12,29 +12,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
 
-/**
- * Endpoint que gera a <b>DRE para finanças pessoais</b>.
- *
- * <p>Exemplo de chamada:
- *
- * <pre>
- * GET /api/v1/dre?usuarioId=1&amp;inicio=2026-03-01&amp;fim=2026-03-31&amp;modo=comparativo
- * </pre>
- *
- * <p>O parâmetro {@code modo} escolhe a leitura das mesmas datas:
- *
- * <ul>
- *   <li>{@code previsto} — filtra títulos por <b>vencimento</b> (o que estava
- *       planejado para o período);</li>
- *   <li>{@code realizado} — filtra movimentações por <b>data</b> (o que de fato
- *       aconteceu no período);</li>
- *   <li>{@code comparativo} — as duas leituras lado a lado, com a variação.
- *       É o padrão.</li>
- * </ul>
- *
- * <p>Não existe endpoint para "gravar" a DRE: ela é sempre derivada dos fatos,
- * e por isso nunca diverge dos lançamentos que a originaram.
- */
 @Tag(
     name = "Relatórios",
     description =

@@ -6,14 +6,6 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-/**
- * Representação pública de uma <b>movimentação</b> — um evento financeiro
- * realizado.
- *
- * <p>{@code tituloId} é nulo quando o lançamento é avulso (sem previsão de
- * origem). Os nomes de conta e categoria vêm "achatados" no JSON para que o
- * cliente não precise fazer chamadas adicionais só para exibir uma lista.
- */
 public record MovimentacaoResponse(
     Long idMovimentacao,
     String descricao,

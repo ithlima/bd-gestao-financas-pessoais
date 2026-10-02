@@ -14,14 +14,6 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 import java.util.List;
 
-/**
- * Endpoints de <b>movimentações</b> — os eventos financeiros realizados.
- *
- * <p>Só existe {@code POST} de criação: uma movimentação representa um fato
- * consumado e, uma vez registrada, não é editada (RN19, RN20). Corrigir um
- * lançamento significa estorná-lo e registrar outro — do mesmo modo que um
- * extrato bancário não é reescrito.
- */
 @Tag(
     name = "Movimentações",
     description =

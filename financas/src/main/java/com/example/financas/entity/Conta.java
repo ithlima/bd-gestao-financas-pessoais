@@ -26,7 +26,7 @@ public class Conta {
   private String nome;
 
   @Column(nullable = false, length = 50)
-  private String tipo;  
+  private String tipo;
 
   @Column(nullable = false, precision = 15, scale = 2)
   private BigDecimal saldoInicial = BigDecimal.ZERO;

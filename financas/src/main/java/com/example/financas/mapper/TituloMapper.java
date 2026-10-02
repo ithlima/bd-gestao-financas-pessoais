@@ -6,27 +6,12 @@ import com.example.financas.entity.Titulo;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-/**
- * Conversão entre a entidade {@code Titulo} e seu DTO de resposta.
- *
- * <p>Aqui ficam concentrados os cálculos derivados que dão sentido ao título:
- * {@code valorRealizado}, {@code valorEmAberto} e {@code situacaoEfetiva}. O
- * mapper não acessa o banco: o valor já realizado é somado pelo service (uma
- * consulta {@code SUM}) e repassado como parâmetro.
- */
 public final class TituloMapper {
 
   private TituloMapper() {
-    // classe utilitária: não deve ser instanciada
+
   }
 
-  /**
-   * @param titulo entidade já carregada
-   * @param valorRealizado soma das movimentações vinculadas, calculada pelo service
-   * @param quantidadeMovimentacoes quantas movimentações já quitaram parte do título
-   * @param referencia data usada para decidir se o título está vencido; permite
-   *     testar a regra sem depender do relógio da máquina
-   */
   public static TituloResponse toResponse(
       Titulo titulo,
       BigDecimal valorRealizado,
@@ -55,7 +40,6 @@ public final class TituloMapper {
         titulo.getUsuario().getIdUsuario());
   }
 
-  /** Atalho que usa a data de hoje como referência. */
   public static TituloResponse toResponse(
       Titulo titulo, BigDecimal valorRealizado, int quantidadeMovimentacoes) {
     return toResponse(titulo, valorRealizado, quantidadeMovimentacoes, LocalDate.now());

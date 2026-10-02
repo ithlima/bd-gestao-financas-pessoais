@@ -16,24 +16,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/**
- * Testes das <b>respostas de erro da API</b>.
- *
- * <p>O objetivo destes testes é garantir a promessa feita ao cliente: nenhuma
- * falha chega como "erro interno" genérico, e nenhuma mensagem vaza detalhe
- * interno (SQL, nome de tabela, classe Java).
- *
- * <p>Cada teste verifica três coisas:
- *
- * <ol>
- *   <li>o <b>status HTTP</b> correto para a situação;</li>
- *   <li>que a <b>mensagem</b> explica o problema em português, sem jargão técnico;</li>
- *   <li>que o corpo segue o <b>formato único</b> {@code ErroResponse}.</li>
- * </ol>
- *
- * <p>Usa {@code MockMvc}, que exercita a pilha real do Spring MVC (inclusive o
- * {@code GlobalExceptionHandler}) sem precisar de servidor de verdade.
- */
 @SpringBootTest
 @AutoConfigureMockMvc
 @Sql(scripts = "/testdata/10-dados-base.sql")
@@ -45,10 +27,6 @@ class TratamentoDeErrosApiTest {
   private static final String CONTAS = "/api/v1/contas";
 
   @Autowired private MockMvc mockMvc;
-
-  // ==================================================================
-  // 400 — o cliente enviou algo malformado
-  // ==================================================================
 
   @Test
   @DisplayName("Campo inválido no corpo: 400 com a lista de campos reprovados")
@@ -71,7 +49,7 @@ class TratamentoDeErrosApiTest {
   @Test
   @DisplayName("Vários campos inválidos: 400 devolve todos de uma vez")
   void variosCamposInvalidosRetornaTodos() throws Exception {
-    // descricao em branco, valorPrevisto nulo, dataVencimento nula
+
     String corpo =
         """
         {"descricao":"","valorPrevisto":null,"dataVencimento":null,
@@ -81,8 +59,7 @@ class TratamentoDeErrosApiTest {
     mockMvc
         .perform(post(TITULOS).contentType(MediaType.APPLICATION_JSON).content(corpo))
         .andExpect(status().isBadRequest())
-        // O cliente deve receber todos os problemas em uma única resposta,
-        // e não descobri-los um a um a cada tentativa.
+
         .andExpect(jsonPath("$.detalhes.length()").value(3));
   }
 
@@ -112,8 +89,7 @@ class TratamentoDeErrosApiTest {
     mockMvc
         .perform(post(TITULOS).contentType(MediaType.APPLICATION_JSON).content(corpo))
         .andExpect(status().isBadRequest())
-        // A mensagem crua do Jackson citaria a classe Java do enum. O cliente
-        // precisa saber quais valores PODE enviar.
+
         .andExpect(jsonPath("$.mensagem").value(
             "Valor inválido para um campo de opções. Valores aceitos: RECEITA, DESPESA"));
   }
@@ -181,10 +157,6 @@ class TratamentoDeErrosApiTest {
             "O parâmetro obrigatório 'usuarioId' não foi informado"));
   }
 
-  // ==================================================================
-  // 404 — recurso ou rota inexistente
-  // ==================================================================
-
   @Test
   @DisplayName("Id inexistente: 404 com mensagem clara")
   void idInexistenteRetorna404() throws Exception {
@@ -208,14 +180,10 @@ class TratamentoDeErrosApiTest {
             "Não existe endpoint para GET /api/v1/rota-que-nao-existe"));
   }
 
-  // ==================================================================
-  // 405 — método HTTP não suportado
-  // ==================================================================
-
   @Test
   @DisplayName("Método não aceito na rota: 405 listando os métodos aceitos")
   void metodoNaoSuportadoRetorna405() throws Exception {
-    // Uma movimentação é um fato consumado: não há DELETE mapeado (RN20).
+
     mockMvc
         .perform(delete("/api/v1/movimentacoes/1"))
         .andExpect(status().isMethodNotAllowed())
@@ -233,10 +201,6 @@ class TratamentoDeErrosApiTest {
         .andExpect(status().isMethodNotAllowed())
         .andExpect(jsonPath("$.erro").value("Método não permitido"));
   }
-
-  // ==================================================================
-  // 409 — conflito com o estado dos dados
-  // ==================================================================
 
   @Test
   @DisplayName("E-mail duplicado: 409")
@@ -258,7 +222,7 @@ class TratamentoDeErrosApiTest {
   @Test
   @DisplayName("Excluir categoria em uso: 409 informando quantos títulos a usam")
   void excluirCategoriaEmUsoRetorna409() throws Exception {
-    // Ana (usuário 1) passa a ter um título na categoria Moradia (id 1).
+
     String corpo =
         """
         {"descricao":"Aluguel","valorPrevisto":1200,"dataVencimento":"2026-03-10",
@@ -272,8 +236,7 @@ class TratamentoDeErrosApiTest {
         .perform(delete(CATEGORIAS + "/1"))
         .andExpect(status().isConflict())
         .andExpect(jsonPath("$.erro").value("Recurso em uso"))
-        // A mensagem diz QUANTOS registros impedem a exclusão — informação que
-        // o erro cru do banco não daria.
+
         .andExpect(jsonPath("$.mensagem").value(
             "Não dá para excluir categoria porque há 1 título vinculado a ele"));
   }
@@ -281,7 +244,7 @@ class TratamentoDeErrosApiTest {
   @Test
   @DisplayName("Excluir conta com movimentação: 409")
   void excluirContaComMovimentacaoRetorna409() throws Exception {
-    // Título quitado gera uma movimentação na conta 1.
+
     String titulo =
         """
         {"descricao":"Aluguel","valorPrevisto":1200,"dataVencimento":"2026-03-10",
@@ -318,13 +281,7 @@ class TratamentoDeErrosApiTest {
   @Test
   @DisplayName("Excluir usuário com dados vinculados: 409 dizendo o que depende dele")
   void excluirUsuarioComDadosRetorna409() throws Exception {
-    // Ana tem uma conta ("Conta da Ana") e três categorias, mas nenhum título.
-    //
-    // A verificação é feita em ordem de relevância — títulos, movimentações,
-    // contas, categorias — e para na primeira que encontrar. Como não há títulos
-    // nem movimentações, o bloqueio relatado é a conta. A ordem importa: se todas
-    // as dependências tivessem a mesma prioridade, a mensagem poderia citar
-    // "3 categorias" quando o dado mais relevante é a conta.
+
     mockMvc
         .perform(delete(USUARIOS + "/1"))
         .andExpect(status().isConflict())
@@ -333,14 +290,10 @@ class TratamentoDeErrosApiTest {
             "Não dá para excluir usuário porque há 1 conta vinculada a ele"));
   }
 
-  // ==================================================================
-  // 422 — regra de negócio
-  // ==================================================================
-
   @Test
   @DisplayName("Regra de negócio violada: 422 com a explicação do domínio")
   void regraDeNegocioRetorna422() throws Exception {
-    // Categoria "Moradia" é de DESPESA; usá-la em uma RECEITA viola a RN03.
+
     String corpo =
         """
         {"descricao":"Freelance","valorPrevisto":800,"dataVencimento":"2026-03-25",
@@ -355,10 +308,6 @@ class TratamentoDeErrosApiTest {
         .andExpect(jsonPath("$.mensagem").value(
             "A categoria 'Moradia' é do tipo DESPESA e não pode ser usada em título de tipo RECEITA"));
   }
-
-  // ==================================================================
-  // Formato e segurança das respostas de erro
-  // ==================================================================
 
   @Test
   @DisplayName("Todo erro segue o mesmo formato, com os mesmos campos")
@@ -376,9 +325,7 @@ class TratamentoDeErrosApiTest {
   @Test
   @DisplayName("Erro de constraint do banco não vaza o SQL executado")
   void erroDeBancoNaoVazaSql() throws Exception {
-    // Excluir o usuário 1 esbarra em chave estrangeira. Mesmo que a validação do
-    // service não existisse, o datasource recusaria — e a resposta NÃO pode
-    // conter o SQL nem o nome da constraint.
+
     String resposta =
         mockMvc
             .perform(delete(USUARIOS + "/1"))
@@ -401,15 +348,13 @@ class TratamentoDeErrosApiTest {
   @Test
   @DisplayName("Erro de parsing não vaza detalhe interno do Jackson")
   void erroDeParsingNaoVazaDetalheInterno() throws Exception {
-    // A mensagem crua do Jackson traz deslocamento de byte, nome da feature de
-    // configuração e a classe Java de destino. Nada disso ajuda quem consome a
-    // API, e revela estrutura interna.
+
     String[] corposProblematicos = {
-      "{\"descricao\": \"Conta\", ",                       // JSON truncado
+      "{\"descricao\": \"Conta\", ",
       "{\"descricao\":\"C\",\"valorPrevisto\":1,\"dataVencimento\":\"2026-03-10\","
-          + "\"tipo\":\"INVALIDO\",\"categoriaId\":1,\"usuarioId\":1}", // enum inválido
+          + "\"tipo\":\"INVALIDO\",\"categoriaId\":1,\"usuarioId\":1}",
       "{\"descricao\":\"C\",\"valorPrevisto\":1,\"dataVencimento\":\"31/02/2026\","
-          + "\"tipo\":\"DESPESA\",\"categoriaId\":1,\"usuarioId\":1}"    // data inválida
+          + "\"tipo\":\"DESPESA\",\"categoriaId\":1,\"usuarioId\":1}"
     };
 
     for (String corpo : corposProblematicos) {
@@ -436,7 +381,6 @@ class TratamentoDeErrosApiTest {
     }
   }
 
-  /** Extrai o {@code idTitulo} do JSON devolvido na criação. */
   private Long extrairId(String json) {
     java.util.regex.Matcher m =
         java.util.regex.Pattern.compile("\"idTitulo\"\\s*:\\s*(\\d+)").matcher(json);

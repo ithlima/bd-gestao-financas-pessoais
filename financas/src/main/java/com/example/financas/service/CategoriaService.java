@@ -18,14 +18,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
-/**
- * Regras de negócio de categoria.
- *
- * <p>A categoria é a unidade de classificação que forma as <b>linhas da DRE</b>.
- * Por isso a regra principal aqui é o nome único por usuário: duas categorias
- * chamadas "Moradia" para o mesmo usuário produziriam duas linhas idênticas no
- * relatório, impossíveis de distinguir.
- */
 @Service
 public class CategoriaService {
 
@@ -96,12 +88,6 @@ public class CategoriaService {
     return CategoriaMapper.toResponse(categoriaRepository.save(categoria));
   }
 
-  /**
-   * Remove uma categoria, se nenhum título ou movimentação a estiver usando.
-   *
-   * <p>Apagar uma categoria em uso deixaria lançamentos sem classificação — e a
-   * categoria é justamente o que forma as linhas da DRE.
-   */
   @Transactional
   public void remover(Long id) {
     Categoria categoria = buscarEntidade(id);
@@ -125,29 +111,6 @@ public class CategoriaService {
         .orElseThrow(() -> RecursoNaoEncontradoException.porId("Categoria", id, true));
   }
 
-  /**
-   * Carrega a categoria e valida as duas regras que a DRE depende
-   * (RN03 para títulos e RN15 para movimentações):
-   *
-   * <ol>
-   *   <li>a categoria deve pertencer ao <b>mesmo usuário</b> do lançamento —
-   *       impede que um usuário classifique algo com a categoria de outro;</li>
-   *   <li>o <b>tipo</b> da categoria deve ser igual ao tipo do lançamento —
-   *       impede classificar uma despesa como "Salários", o que faria a DRE
-   *       somar valores no bloco errado.</li>
-   * </ol>
-   *
-   * <p>A mensagem de erro evita a construção "em uma <i>origem</i>", porque
-   * "título" é masculino e "movimentação" é feminino: um artigo fixo erraria em
-   * um dos dois casos ("em uma título" / "em um movimentação"). Usando "de tipo
-   * X em Y", nenhum artigo é necessário.
-   *
-   * @param categoriaId categoria informada no request
-   * @param usuarioId dono do título ou da movimentação
-   * @param tipo tipo do título ou da movimentação
-   * @param origem nome do lançamento, no singular e sem artigo ("título",
-   *     "movimentação")
-   */
   public Categoria validarCategoriaDoLancamento(
       Long categoriaId, Long usuarioId, TipoMovimentacao tipo, String origem) {
 

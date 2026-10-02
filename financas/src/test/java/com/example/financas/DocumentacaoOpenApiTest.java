@@ -20,32 +20,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/**
- * Verifica que a <b>documentação OpenAPI está completa e coerente</b> com os
- * endpoints realmente expostos.
- *
- * <p>Este teste existe porque a documentação é gerada a partir do código: se um
- * controller novo for criado e esquecido, ou se um endpoint deixar de ser
- * documentado, a falha aparece aqui — e não na mão de quem tenta usar a API pelo
- * Swagger.
- *
- * <p>Ele cobre três coisas:
- *
- * <ol>
- *   <li><b>existência</b> — o contrato é gerado e o Swagger UI é servido;</li>
- *   <li><b>completude</b> — todos os endpoints estão documentados, com descrição,
- *       tag e os schemas de entrada e saída;</li>
- *   <li><b>coerência</b> — o documento descreve os mesmos caminhos que o Spring MVC
- *       expõe, e os schemas mostram os campos que a API realmente devolve.</li>
- * </ol>
- */
 @SpringBootTest
 @AutoConfigureMockMvc
 class DocumentacaoOpenApiTest {
 
   @Autowired private MockMvc mockMvc;
 
-  /** Lê o contrato OpenAPI gerado pela aplicação. */
   private JsonNode lerContrato() throws Exception {
     String json =
         mockMvc
@@ -57,10 +37,6 @@ class DocumentacaoOpenApiTest {
 
     return new ObjectMapper().readTree(json);
   }
-
-  // ==================================================================
-  // Existência
-  // ==================================================================
 
   @Test
   @DisplayName("O contrato OpenAPI é gerado")
@@ -76,17 +52,12 @@ class DocumentacaoOpenApiTest {
   @Test
   @DisplayName("O Swagger UI é servido")
   void swaggerUiEhServido() throws Exception {
-    // O springdoc redireciona /swagger-ui.html para o index da interface.
+
     mockMvc
         .perform(get("/swagger-ui/index.html"))
         .andExpect(status().isOk());
   }
 
-  // ==================================================================
-  // Completude — todos os endpoints documentados
-  // ==================================================================
-
-  /** Os caminhos que a API expõe. Manter em sincronia com os controllers. */
   private static final List<String> CAMINHOS_ESPERADOS =
       List.of(
           "/api/v1/usuarios",
@@ -133,7 +104,7 @@ class DocumentacaoOpenApiTest {
 
     List<String> orfaos = new ArrayList<>();
     for (String caminho : CAMINHOS_ESPERADOS) {
-      // verificação inversa: tudo que está no contrato deve estar na lista
+
     }
     var nomes = new ArrayList<String>();
     paths.propertyNames().forEach(nomes::add);
@@ -202,16 +173,11 @@ class DocumentacaoOpenApiTest {
     }
   }
 
-  // ==================================================================
-  // Schemas de entrada e saída
-  // ==================================================================
-
   @Test
   @DisplayName("Os schemas de requisição e resposta estão registrados")
   void schemasRegistrados() throws Exception {
     JsonNode schemas = lerContrato().path("components").path("schemas");
 
-    // Entrada (dto/request)
     for (String s :
         List.of(
             "UsuarioRequest", "ContaRequest", "CategoriaRequest", "TituloRequest",
@@ -219,7 +185,6 @@ class DocumentacaoOpenApiTest {
       assertTrue(schemas.has(s), "Schema de requisição ausente: " + s);
     }
 
-    // Saída (dto/response)
     for (String s :
         List.of(
             "UsuarioResponse", "ContaResponse", "CategoriaResponse", "TituloResponse",
@@ -235,8 +200,6 @@ class DocumentacaoOpenApiTest {
     JsonNode titulo = lerContrato().path("components").path("schemas").path("TituloResponse");
     JsonNode props = titulo.path("properties");
 
-    // Estes campos são o coração da regra de negócio e não podem sumir da
-    // documentação: são eles que mostram previsão x realização.
     for (String campo :
         List.of(
             "idTitulo", "descricao", "valorPrevisto", "valorRealizado", "valorEmAberto",
@@ -257,18 +220,12 @@ class DocumentacaoOpenApiTest {
     }
   }
 
-  // ==================================================================
-  // Coerência com as regras de negócio
-  // ==================================================================
-
   @Test
   @DisplayName("O endpoint de pagar documenta a resposta 422 de regra de negócio")
   void endpointDePagamentoDocumenta422() throws Exception {
     JsonNode pagar = lerContrato().path("paths").path("/api/v1/titulos/{id}/pagar").path("post");
     assertNotNull(pagar, "A operação de pagar não está documentada");
 
-    // A descrição precisa explicar que o valor pode ser parcial, senão o usuário
-    // da API não descobre esse comportamento lendo o Swagger.
     String descricao = pagar.path("description").asString().toLowerCase();
     assertTrue(
         descricao.contains("parcial"),
@@ -300,15 +257,10 @@ class DocumentacaoOpenApiTest {
             .getResponse()
             .getContentAsString();
 
-    // Se o Jackson consegue ler, o Postman/Insomnia também conseguem.
     JsonNode doc = new ObjectMapper().readTree(json);
     assertTrue(doc.has("openapi"), "O contrato precisa declarar a versão do OpenAPI");
     assertTrue(doc.has("paths"), "O contrato precisa ter paths");
   }
-
-  // ==================================================================
-  // Acentuação
-  // ==================================================================
 
   @Test
   @DisplayName("O contrato é UTF-8 válido: os acentos chegam como caracteres únicos")
@@ -321,10 +273,6 @@ class DocumentacaoOpenApiTest {
             .getResponse()
             .getContentAsString();
 
-    // "Títulos" com i-acento (U+00ED). Se a codificação quebrar em algum ponto da
-    // cadeia, o mesmo caractere vira dois: "Ã" (U+00C3) seguido de um soft hyphen
-    // (U+00AD). É o defeito conhecido como mojibake, e ele apareceu de verdade no
-    // Swagger deste projeto — daí este teste.
     assertTrue(
         json.contains("T\u00EDtulos"),
         "O contrato deveria conter 'Títulos' com i-acento (U+00ED)");
@@ -333,7 +281,6 @@ class DocumentacaoOpenApiTest {
         json.contains("T\u00C3\u00ADtulos"),
         "Acentuação corrompida no contrato: 'Títulos' virou 'TÃ\u00ADtulos' (mojibake)");
 
-    // Outras palavras acentuadas que aparecem nas descrições e nos nomes das tags.
     for (String palavra :
         List.of("Usu\u00E1rios", "Movimenta\u00E7\u00F5es", "situa\u00E7\u00E3o")) {
       assertTrue(
@@ -348,7 +295,6 @@ class DocumentacaoOpenApiTest {
     JsonNode dre = lerContrato().path("paths").path("/api/v1/dre").path("get");
     String texto = dre.path("summary").asString() + " " + dre.path("description").asString();
 
-    // "período" tem i-acento; "apuração" tem c-cedilha e a-til.
     assertTrue(
         texto.contains("per\u00EDodo"), "A descrição da DRE perdeu o acento de 'período'");
     assertTrue(

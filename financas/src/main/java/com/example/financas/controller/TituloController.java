@@ -22,25 +22,6 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 import java.util.List;
 
-/**
- * Endpoints de <b>títulos</b> â€” os compromissos financeiros previstos.
- *
- * <p>Este é o controller que materializa a separação entre previsão e
- * realização:
- *
- * <pre>
- *   POST /titulos                  -> cria a PREVISÃƒO. Nada acontece no caixa
- *                                     e nada muda na DRE realizada.
- *   POST /titulos/{id}/pagar       -> registra a REALIZAÃ‡ÃƒO (despesa paga):
- *                                     cria a movimentação e atualiza o título.
- *   POST /titulos/{id}/receber     -> registra a REALIZAÃ‡ÃƒO (receita recebida).
- *   POST /titulos/{id}/cancelar    -> desfaz a previsão, se nada foi realizado.
- * </pre>
- *
- * <p>Repare que não existe endpoint para "criar a despesa de um título". Essa
- * operação simplesmente não existe: despesa é consequência de pagamento, nunca
- * de cadastro.
- */
 @Tag(
     name = "Títulos",
     description =

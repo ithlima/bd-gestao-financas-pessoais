@@ -19,17 +19,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Regras de negócio de conta financeira.
- *
- * <p>Além do CRUD, este service expõe o <b>saldo atual</b> de cada conta:
- * {@code saldoInicial + receitas realizadas − despesas realizadas}.
- *
- * <p>Esse cálculo só é possível como uma consulta única porque as tabelas
- * {@code recebimento} e {@code pagamento} foram absorvidas por
- * {@code movimentacao}, que agora tem {@code conta_id} obrigatório. No modelo
- * antigo seria necessário um {@code UNION} com dois totais.
- */
 @Service
 public class ContaService {
 
@@ -46,7 +35,6 @@ public class ContaService {
     this.usuarioService = usuarioService;
   }
 
-  /** Lista as contas com o saldo atual já calculado. */
   @Transactional(readOnly = true)
   public List<ContaResponse> listar(Long usuarioId) {
     Map<Long, BigDecimal> saldos = calcularSaldos(usuarioId);
@@ -100,13 +88,6 @@ public class ContaService {
     return ContaMapper.toResponse(salva, buscarSaldoDaConta(salva));
   }
 
-  /**
-   * Remove uma conta, se não houver movimentações nela.
-   *
-   * <p>Apagar uma conta que já teve dinheiro movimentado destruiria o histórico
-   * do caixa. Se a conta não deve mais ser usada, o caminho é deixá-la sem
-   * movimentações novas, não apagá-la.
-   */
   @Transactional
   public void remover(Long id) {
     Conta conta = buscarEntidade(id);
@@ -125,12 +106,6 @@ public class ContaService {
         .orElseThrow(() -> RecursoNaoEncontradoException.porId("Conta", id, true));
   }
 
-  /**
-   * Valida que a conta existe e pertence ao usuário informado (RN14).
-   *
-   * <p>Usado quando um título é quitado: não faz sentido pagar uma conta de
-   * energia usando a conta bancária de outro usuário.
-   */
   public Conta validarContaDoUsuario(Long contaId, Long usuarioId) {
     Conta conta = buscarEntidade(contaId);
 
@@ -141,7 +116,6 @@ public class ContaService {
     return conta;
   }
 
-  /** Mapa {@code idConta → saldoAtual}, para evitar uma consulta por conta. */
   private Map<Long, BigDecimal> calcularSaldos(Long usuarioId) {
     Map<Long, BigDecimal> saldos = new HashMap<>();
 
