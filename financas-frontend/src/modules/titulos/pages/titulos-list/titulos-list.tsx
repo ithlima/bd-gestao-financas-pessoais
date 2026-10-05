@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { titulosService, ITitulo } from '../../services/titulos.service';
+import { useEffect, useState } from 'react';
+import { titulosService } from '../../services/titulos.service';
+import type { ITitulo } from '../../services/titulos.service';
 import { useAuthStore } from '@/modules/auth';
 
 export const TitulosListPage = () => {
