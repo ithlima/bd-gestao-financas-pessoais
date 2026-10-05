@@ -3,14 +3,14 @@ import { titulosService } from '../../services/titulos.service';
 import type { ITitulo } from '../../services/titulos.service';
 import { contasService } from '../../services/dashboard.service';
 import type { IConta } from '../../services/dashboard.service';
-import { useAuthStore, getUsuarioIdFromToken } from '@/modules/auth';
+import { getUsuarioIdFromToken } from '@/modules/auth';
 import { apiClient } from '@/shared/api-client/apiClient';
+import { Layout } from '@/shared/components/Layout';
 
 export const TitulosListPage = () => {
   const [titulos, setTitulos] = useState<ITitulo[]>([]);
   const [contas, setContas] = useState<IConta[]>([]);
   const [loading, setLoading] = useState(true);
-  const logout = useAuthStore(s => s.logout);
   const usuarioId = getUsuarioIdFromToken() || 1;
 
   const loadData = () => {
@@ -111,16 +111,41 @@ export const TitulosListPage = () => {
     }
   };
 
+  const handleCriarTitulo = async () => {
+    const descricao = prompt('Descrição do título:');
+    if (!descricao) return;
+    const valor = prompt('Valor (Ex: 150.50):');
+    const tipo = prompt('Tipo (DESPESA ou RECEITA):', 'DESPESA');
+    const dataVencimento = prompt('Data de Vencimento (YYYY-MM-DD):', new Date().toISOString().split('T')[0]);
+    const categoriaId = prompt('ID da Categoria:');
+    
+    try {
+      await apiClient.post('/titulos', {
+        descricao,
+        valorPrevisto: parseFloat(valor || '0'),
+        tipo,
+        dataVencimento,
+        categoriaId: parseInt(categoriaId || '0', 10),
+        usuarioId
+      });
+      loadData();
+    } catch (e: any) {
+      alert("Erro ao criar: " + (e.response?.data?.message || e.message));
+    }
+  };
+
   const totalSaldo = contas.reduce((acc, c) => acc + c.saldoAtual, 0);
 
   if (loading) return <div className="p-8 text-center text-gray-500">Carregando painel...</div>;
 
   return (
-    <div className="p-8 max-w-6xl mx-auto">
-      <div className="flex justify-between items-center mb-8">
+    <Layout>
+      <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800">Painel Financeiro</h1>
-          <p className="text-gray-500 mt-1">Saldo Total: <strong className={totalSaldo >= 0 ? 'text-green-600' : 'text-red-600'}>R$ {totalSaldo.toFixed(2)}</strong></p>
+          <h1 className="text-3xl font-bold text-gray-800">Títulos a Pagar / Receber</h1>
+          <p className="text-gray-500 mt-1">
+            Saldo Total: <strong className={totalSaldo >= 0 ? 'text-green-600' : 'text-red-600'}>R$ {totalSaldo.toFixed(2)}</strong>
+          </p>
         </div>
         <div className="space-x-4">
           {titulos.length === 0 && contas.length === 0 && (
@@ -128,8 +153,8 @@ export const TitulosListPage = () => {
               + Gerar Dados de Teste
             </button>
           )}
-          <button onClick={logout} className="px-4 py-2 bg-red-100 text-red-700 font-medium rounded hover:bg-red-200">
-            Sair da Conta
+          <button onClick={handleCriarTitulo} className="px-4 py-2 bg-blue-600 text-white font-medium rounded hover:bg-blue-700">
+            Novo Título
           </button>
         </div>
       </div>
@@ -195,6 +220,6 @@ export const TitulosListPage = () => {
           </tbody>
         </table>
       </div>
-    </div>
+    </Layout>
   );
 };
