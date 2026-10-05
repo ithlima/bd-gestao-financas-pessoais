@@ -25,18 +25,21 @@ public class UsuarioService {
   private final MovimentacaoRepository movimentacaoRepository;
   private final ContaRepository contaRepository;
   private final CategoriaRepository categoriaRepository;
+  private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
 
   public UsuarioService(
       UsuarioRepository usuarioRepository,
       TituloRepository tituloRepository,
       MovimentacaoRepository movimentacaoRepository,
       ContaRepository contaRepository,
-      CategoriaRepository categoriaRepository) {
+      CategoriaRepository categoriaRepository,
+      org.springframework.security.crypto.password.PasswordEncoder passwordEncoder) {
     this.usuarioRepository = usuarioRepository;
     this.tituloRepository = tituloRepository;
     this.movimentacaoRepository = movimentacaoRepository;
     this.contaRepository = contaRepository;
     this.categoriaRepository = categoriaRepository;
+    this.passwordEncoder = passwordEncoder;
   }
 
   @Transactional(readOnly = true)
@@ -58,7 +61,7 @@ public class UsuarioService {
     Usuario usuario = new Usuario();
     usuario.setNome(request.nome());
     usuario.setEmail(request.email());
-    usuario.setSenha(request.senha());
+    usuario.setSenha(passwordEncoder.encode(request.senha()));
     usuario.setAtivo(request.ativoOuPadrao());
 
     return UsuarioMapper.toResponse(usuarioRepository.save(usuario));
@@ -75,7 +78,9 @@ public class UsuarioService {
 
     usuario.setNome(request.nome());
     usuario.setEmail(request.email());
-    usuario.setSenha(request.senha());
+    if (request.senha() != null && !request.senha().isBlank()) {
+      usuario.setSenha(passwordEncoder.encode(request.senha()));
+    }
     usuario.setAtivo(request.ativoOuPadrao());
 
     return UsuarioMapper.toResponse(usuarioRepository.save(usuario));

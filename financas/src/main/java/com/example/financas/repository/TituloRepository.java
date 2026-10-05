@@ -61,4 +61,8 @@ public interface TituloRepository extends JpaRepository<Titulo, Long> {
       @Param("usuarioId") Long usuarioId,
       @Param("inicio") LocalDate inicio,
       @Param("fim") LocalDate fim);
+
+  @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+  @Query("SELECT t FROM Titulo t WHERE t.idTitulo = :id")
+  java.util.Optional<Titulo> findByIdWithLock(@Param("id") Long id);
 }

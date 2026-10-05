@@ -215,7 +215,7 @@ public class TituloController {
   @PostMapping("/{id}/pagar")
   public TituloResponse pagar(
       @PathVariable Long id, @Valid @RequestBody PagamentoRequest request) {
-    return tituloService.pagar(id, request.valor(), request.data(), request.contaId());
+    return tituloService.pagar(id, request.valor(), request.data(), request.contaId(), request.usuarioId());
   }
 
   @Operation(
@@ -264,7 +264,7 @@ public class TituloController {
   @PostMapping("/{id}/receber")
   public TituloResponse receber(
       @PathVariable Long id, @Valid @RequestBody RecebimentoRequest request) {
-    return tituloService.receber(id, request.valor(), request.data(), request.contaId());
+    return tituloService.receber(id, request.valor(), request.data(), request.contaId(), request.usuarioId());
   }
 
   @Operation(

@@ -96,4 +96,14 @@ public class MovimentacaoController {
     return ResponseEntity.status(HttpStatus.CREATED)
         .body(movimentacaoService.registrarAvulsa(request));
   }
+
+  @Operation(
+      summary = "Estorna (remove) uma movimentação",
+      description = "Exclui a movimentação e, se ela pertencer a um título, reabre o título se necessário."
+  )
+  @DeleteMapping("/{id}")
+  public ResponseEntity<Void> estornar(@PathVariable Long id) {
+    movimentacaoService.estornar(id);
+    return ResponseEntity.noContent().build();
+  }
 }

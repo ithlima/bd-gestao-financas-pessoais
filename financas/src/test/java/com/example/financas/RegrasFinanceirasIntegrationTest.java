@@ -107,7 +107,7 @@ class RegrasFinanceirasIntegrationTest {
 
     TituloResponse tituloPago =
         tituloService.pagar(
-            idTitulo, new BigDecimal("150.00"), LocalDate.of(2026, 3, 8), CONTA_DA_ANA);
+            idTitulo, new BigDecimal("150.00"), LocalDate.of(2026, 3, 8), CONTA_DA_ANA, ANA);
 
     assertEquals(SituacaoTitulo.PAGO, tituloPago.situacao());
     verificarValor("Valor realizado após quitação", "150.00", tituloPago.valorRealizado());
@@ -125,7 +125,7 @@ class RegrasFinanceirasIntegrationTest {
   void realizadoUsaDataDoPagamento() {
     Long idTitulo = criarTituloDespesa("Conta de energia", "150.00", LocalDate.of(2026, 3, 10));
 
-    tituloService.pagar(idTitulo, new BigDecimal("150.00"), LocalDate.of(2026, 4, 5), CONTA_DA_ANA);
+    tituloService.pagar(idTitulo, new BigDecimal("150.00"), LocalDate.of(2026, 4, 5), CONTA_DA_ANA, ANA);
 
     DreResponse marco = dreService.gerar(ANA, INICIO, FIM, "comparativo");
     DreResponse abril =
@@ -146,7 +146,7 @@ class RegrasFinanceirasIntegrationTest {
 
     TituloResponse aposPrimeiraParcela =
         tituloService.pagar(
-            idTitulo, new BigDecimal("600.00"), LocalDate.of(2026, 3, 5), CONTA_DA_ANA);
+            idTitulo, new BigDecimal("600.00"), LocalDate.of(2026, 3, 5), CONTA_DA_ANA, ANA);
 
     assertEquals(SituacaoTitulo.PENDENTE, aposPrimeiraParcela.situacao());
     verificarValor("Realizado após 1ª parcela", "600.00", aposPrimeiraParcela.valorRealizado());
@@ -164,10 +164,10 @@ class RegrasFinanceirasIntegrationTest {
   void segundaParcelaQuitaOTitulo() {
     Long idTitulo = criarTituloDespesa("Aluguel", "1200.00", LocalDate.of(2026, 3, 5));
 
-    tituloService.pagar(idTitulo, new BigDecimal("600.00"), LocalDate.of(2026, 3, 5), CONTA_DA_ANA);
+    tituloService.pagar(idTitulo, new BigDecimal("600.00"), LocalDate.of(2026, 3, 5), CONTA_DA_ANA, ANA);
     TituloResponse quitado =
         tituloService.pagar(
-            idTitulo, new BigDecimal("600.00"), LocalDate.of(2026, 3, 20), CONTA_DA_ANA);
+            idTitulo, new BigDecimal("600.00"), LocalDate.of(2026, 3, 20), CONTA_DA_ANA, ANA);
 
     assertEquals(SituacaoTitulo.PAGO, quitado.situacao());
     verificarValor("Soma das duas parcelas", "1200.00", quitado.valorRealizado());
@@ -190,7 +190,7 @@ class RegrasFinanceirasIntegrationTest {
             RegraNegocioException.class,
             () ->
                 tituloService.pagar(
-                    idTitulo, new BigDecimal("200.00"), LocalDate.of(2026, 3, 8), CONTA_DA_ANA));
+                    idTitulo, new BigDecimal("200.00"), LocalDate.of(2026, 3, 8), CONTA_DA_ANA, ANA));
 
     assertTrue(erro.getMessage().contains("maior que o valor em aberto"), erro.getMessage());
 
@@ -202,14 +202,14 @@ class RegrasFinanceirasIntegrationTest {
   void naoPermitePagarTituloJaQuitado() {
     Long idTitulo = criarTituloDespesa("Conta de energia", "150.00", LocalDate.of(2026, 3, 10));
 
-    tituloService.pagar(idTitulo, new BigDecimal("150.00"), LocalDate.of(2026, 3, 8), CONTA_DA_ANA);
+    tituloService.pagar(idTitulo, new BigDecimal("150.00"), LocalDate.of(2026, 3, 8), CONTA_DA_ANA, ANA);
 
     RegraNegocioException erro =
         assertThrows(
             RegraNegocioException.class,
             () ->
                 tituloService.pagar(
-                    idTitulo, new BigDecimal("10.00"), LocalDate.of(2026, 3, 9), CONTA_DA_ANA));
+                    idTitulo, new BigDecimal("10.00"), LocalDate.of(2026, 3, 9), CONTA_DA_ANA, ANA));
 
     assertTrue(erro.getMessage().contains("já está quitado"), erro.getMessage());
   }
@@ -226,7 +226,7 @@ class RegrasFinanceirasIntegrationTest {
             RegraNegocioException.class,
             () ->
                 tituloService.pagar(
-                    idTitulo, new BigDecimal("150.00"), LocalDate.of(2026, 3, 8), CONTA_DA_ANA));
+                    idTitulo, new BigDecimal("150.00"), LocalDate.of(2026, 3, 8), CONTA_DA_ANA, ANA));
 
     assertTrue(erro.getMessage().contains("cancelado"), erro.getMessage());
 
@@ -247,7 +247,7 @@ class RegrasFinanceirasIntegrationTest {
                     idTitulo,
                     new BigDecimal("150.00"),
                     LocalDate.of(2026, 3, 8),
-                    CONTA_DO_BRUNO));
+                    CONTA_DO_BRUNO, BRUNO));
 
     assertTrue(erro.getMessage().contains("outro usuário"), erro.getMessage());
   }
@@ -342,8 +342,8 @@ class RegrasFinanceirasIntegrationTest {
     Long moradia = criarTituloDespesa("Aluguel", "1500.00", LocalDate.of(2026, 3, 10));
 
     tituloService.receber(
-        salario, new BigDecimal("5000.00"), LocalDate.of(2026, 3, 5), CONTA_DA_ANA);
-    tituloService.pagar(moradia, new BigDecimal("750.00"), LocalDate.of(2026, 3, 10), CONTA_DA_ANA);
+        salario, new BigDecimal("5000.00"), LocalDate.of(2026, 3, 5), CONTA_DA_ANA, ANA);
+    tituloService.pagar(moradia, new BigDecimal("750.00"), LocalDate.of(2026, 3, 10), CONTA_DA_ANA, ANA);
 
     DreResponse dre = dreService.gerar(ANA, INICIO, FIM, "comparativo");
 
@@ -373,8 +373,8 @@ class RegrasFinanceirasIntegrationTest {
     criarTituloReceita("Bônus previsto", "1000.00", LocalDate.of(2026, 3, 6));
 
     tituloService.receber(
-        salario, new BigDecimal("5000.00"), LocalDate.of(2026, 3, 5), CONTA_DA_ANA);
-    tituloService.pagar(lazer, new BigDecimal("100.00"), LocalDate.of(2026, 3, 15), CONTA_DA_ANA);
+        salario, new BigDecimal("5000.00"), LocalDate.of(2026, 3, 5), CONTA_DA_ANA, ANA);
+    tituloService.pagar(lazer, new BigDecimal("100.00"), LocalDate.of(2026, 3, 15), CONTA_DA_ANA, ANA);
 
     DreResponse dre = dreService.gerar(ANA, INICIO, FIM, "comparativo");
 
@@ -403,7 +403,7 @@ class RegrasFinanceirasIntegrationTest {
   @DisplayName("Gastar menos que o previsto produz variação positiva (favorável)")
   void gastarMenosEhVariacaoPositiva() {
     Long moradia = criarTituloDespesa("Aluguel", "1500.00", LocalDate.of(2026, 3, 10));
-    tituloService.pagar(moradia, new BigDecimal("1200.00"), LocalDate.of(2026, 3, 10), CONTA_DA_ANA);
+    tituloService.pagar(moradia, new BigDecimal("1200.00"), LocalDate.of(2026, 3, 10), CONTA_DA_ANA, ANA);
 
     DreResponse dre = dreService.gerar(ANA, INICIO, FIM, "comparativo");
 
@@ -422,7 +422,7 @@ class RegrasFinanceirasIntegrationTest {
     LocalDate referencia = LocalDate.of(2026, 3, 15);
 
     Long aluguel = criarTituloDespesa("Aluguel", "1200.00", LocalDate.of(2026, 3, 20));
-    tituloService.pagar(aluguel, new BigDecimal("600.00"), LocalDate.of(2026, 3, 10), CONTA_DA_ANA);
+    tituloService.pagar(aluguel, new BigDecimal("600.00"), LocalDate.of(2026, 3, 10), CONTA_DA_ANA, ANA);
 
     criarTituloDespesa("Conta de energia", "150.00", LocalDate.of(2026, 3, 25));
 
@@ -453,7 +453,7 @@ class RegrasFinanceirasIntegrationTest {
     LocalDate referencia = LocalDate.of(2026, 3, 15);
 
     Long pago = criarTituloDespesa("Conta quitada", "150.00", LocalDate.of(2026, 3, 10));
-    tituloService.pagar(pago, new BigDecimal("150.00"), LocalDate.of(2026, 3, 8), CONTA_DA_ANA);
+    tituloService.pagar(pago, new BigDecimal("150.00"), LocalDate.of(2026, 3, 8), CONTA_DA_ANA, ANA);
 
     Long cancelado = criarTituloDespesa("Conta cancelada", "200.00", LocalDate.of(2026, 3, 12));
     tituloService.cancelar(cancelado);
@@ -550,7 +550,7 @@ class RegrasFinanceirasIntegrationTest {
     criarTituloReceita("Salário", "1500.00", LocalDate.of(2026, 3, 20));
 
     Long aluguel = criarTituloDespesa("Aluguel", "1200.00", LocalDate.of(2026, 3, 20));
-    tituloService.pagar(aluguel, new BigDecimal("400.00"), LocalDate.of(2026, 3, 10), CONTA_DA_ANA);
+    tituloService.pagar(aluguel, new BigDecimal("400.00"), LocalDate.of(2026, 3, 10), CONTA_DA_ANA, ANA);
     criarTituloDespesa("Conta de luz", "150.00", LocalDate.of(2026, 3, 25));
 
     ResumoFinanceiroResponse resumo =
@@ -589,7 +589,7 @@ class RegrasFinanceirasIntegrationTest {
   @DisplayName("O modo 'previsto' só devolve valores previstos; o realizado vem nulo")
   void modoPrevistoNaoDevolveRealizado() {
     Long titulo = criarTituloDespesa("Aluguel", "1200.00", LocalDate.of(2026, 3, 10));
-    tituloService.pagar(titulo, new BigDecimal("1200.00"), LocalDate.of(2026, 3, 10), CONTA_DA_ANA);
+    tituloService.pagar(titulo, new BigDecimal("1200.00"), LocalDate.of(2026, 3, 10), CONTA_DA_ANA, ANA);
 
     DreResponse dre = dreService.gerar(ANA, INICIO, FIM, "previsto");
 
@@ -614,7 +614,7 @@ class RegrasFinanceirasIntegrationTest {
   @DisplayName("O modo 'realizado' só devolve valores realizados; o previsto vem nulo")
   void modoRealizadoNaoDevolvePrevisto() {
     Long titulo = criarTituloDespesa("Aluguel", "1200.00", LocalDate.of(2026, 3, 10));
-    tituloService.pagar(titulo, new BigDecimal("1200.00"), LocalDate.of(2026, 3, 10), CONTA_DA_ANA);
+    tituloService.pagar(titulo, new BigDecimal("1200.00"), LocalDate.of(2026, 3, 10), CONTA_DA_ANA, ANA);
 
     DreResponse dre = dreService.gerar(ANA, INICIO, FIM, "realizado");
 
@@ -636,7 +636,7 @@ class RegrasFinanceirasIntegrationTest {
   @DisplayName("O modo 'comparativo' devolve os dois lados e a variação")
   void modoComparativoDevolveOsDoisLados() {
     Long titulo = criarTituloDespesa("Aluguel", "1200.00", LocalDate.of(2026, 3, 10));
-    tituloService.pagar(titulo, new BigDecimal("900.00"), LocalDate.of(2026, 3, 10), CONTA_DA_ANA);
+    tituloService.pagar(titulo, new BigDecimal("900.00"), LocalDate.of(2026, 3, 10), CONTA_DA_ANA, ANA);
 
     DreResponse dre = dreService.gerar(ANA, INICIO, FIM, "comparativo");
 

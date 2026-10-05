@@ -134,17 +134,6 @@ public class MovimentacaoService {
     if (titulo.getSituacao() == SituacaoTitulo.PAGO) {
       throw new RegraNegocioException("Este título já está quitado");
     }
-
-    BigDecimal emAberto = titulo.getValorPrevisto().subtract(totalRealizadoDoTitulo(titulo.getIdTitulo()));
-
-    if (valor.compareTo(emAberto) > 0) {
-      throw new RegraNegocioException(
-          "O valor informado (R$ "
-              + valor
-              + ") é maior que o valor em aberto do título (R$ "
-              + emAberto
-              + ")");
-    }
   }
 
   private void quitarTituloSeTotalmenteRealizado(Titulo titulo) {
@@ -196,5 +185,22 @@ public class MovimentacaoService {
   @Transactional(readOnly = true)
   public List<Movimentacao> listarPorTitulo(Long tituloId) {
     return movimentacaoRepository.findByTituloIdTitulo(tituloId);
+  }
+
+  @Transactional
+  public void estornar(Long id) {
+    Movimentacao movimentacao = buscarEntidade(id);
+    Titulo titulo = movimentacao.getTitulo();
+    
+    movimentacaoRepository.delete(movimentacao);
+    
+    if (titulo != null) {
+      BigDecimal realizadoRestante = totalRealizadoDoTitulo(titulo.getIdTitulo());
+      if (realizadoRestante.compareTo(titulo.getValorPrevisto()) < 0) {
+        titulo.setSituacao(SituacaoTitulo.PENDENTE);
+        titulo.setDataPagamento(null);
+        tituloRepository.save(titulo);
+      }
+    }
   }
 }

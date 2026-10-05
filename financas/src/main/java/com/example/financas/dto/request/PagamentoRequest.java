@@ -11,4 +11,5 @@ public record PagamentoRequest(
         @Positive(message = "O valor deve ser maior que zero")
         BigDecimal valor,
     @NotNull(message = "A data do pagamento é obrigatória") LocalDate data,
-    @NotNull(message = "A conta é obrigatória") Long contaId) {}
+    @NotNull(message = "A conta é obrigatória") Long contaId,
+    @NotNull(message = "O usuário é obrigatório") Long usuarioId) {}

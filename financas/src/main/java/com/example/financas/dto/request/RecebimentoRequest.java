@@ -11,4 +11,5 @@ public record RecebimentoRequest(
         @Positive(message = "O valor deve ser maior que zero")
         BigDecimal valor,
     @NotNull(message = "A data do recebimento é obrigatória") LocalDate data,
-    @NotNull(message = "A conta é obrigatória") Long contaId) {}
+    @NotNull(message = "A conta é obrigatória") Long contaId,
+    @NotNull(message = "O usuário é obrigatório") Long usuarioId) {}

@@ -184,19 +184,24 @@ public class TituloService {
   }
 
   @Transactional
-  public TituloResponse pagar(Long id, BigDecimal valor, LocalDate data, Long contaId) {
-    return quitar(id, valor, data, contaId, TipoMovimentacao.DESPESA);
+  public TituloResponse pagar(Long id, BigDecimal valor, LocalDate data, Long contaId, Long usuarioId) {
+    return quitar(id, valor, data, contaId, usuarioId, TipoMovimentacao.DESPESA);
   }
 
   @Transactional
-  public TituloResponse receber(Long id, BigDecimal valor, LocalDate data, Long contaId) {
-    return quitar(id, valor, data, contaId, TipoMovimentacao.RECEITA);
+  public TituloResponse receber(Long id, BigDecimal valor, LocalDate data, Long contaId, Long usuarioId) {
+    return quitar(id, valor, data, contaId, usuarioId, TipoMovimentacao.RECEITA);
   }
 
   private TituloResponse quitar(
-      Long id, BigDecimal valor, LocalDate data, Long contaId, TipoMovimentacao tipoEsperado) {
+      Long id, BigDecimal valor, LocalDate data, Long contaId, Long usuarioId, TipoMovimentacao tipoEsperado) {
 
-    Titulo titulo = buscarEntidade(id);
+    Titulo titulo = tituloRepository.findByIdWithLock(id)
+        .orElseThrow(() -> RecursoNaoEncontradoException.porId("Título", id, false));
+
+    if (!titulo.getUsuario().getIdUsuario().equals(usuarioId)) {
+      throw new RegraNegocioException("Este título pertence a outro usuário");
+    }
 
     if (titulo.getTipo() != tipoEsperado) {
       throw new RegraNegocioException(
@@ -220,18 +225,6 @@ public class TituloService {
     }
     if (titulo.getSituacao() == SituacaoTitulo.PAGO) {
       throw new RegraNegocioException("Este título já está quitado");
-    }
-
-    BigDecimal jaRealizado = movimentacaoService.totalRealizadoDoTitulo(titulo.getIdTitulo());
-    BigDecimal emAberto = titulo.getValorPrevisto().subtract(jaRealizado);
-
-    if (valor.compareTo(emAberto) > 0) {
-      throw new RegraNegocioException(
-          "O valor informado (R$ "
-              + valor
-              + ") é maior que o valor em aberto do título (R$ "
-              + emAberto
-              + ")");
     }
   }
 
