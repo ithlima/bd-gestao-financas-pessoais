@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { titulosService } from '../../services/titulos.service';
 import type { ITitulo } from '../../services/titulos.service';
-import { contasService, IConta } from '../../services/dashboard.service';
+import { contasService } from '../../services/dashboard.service';
+import type { IConta } from '../../services/dashboard.service';
 import { useAuthStore, getUsuarioIdFromToken } from '@/modules/auth';
+import { apiClient } from '@/shared/api-client/apiClient';
 
 export const TitulosListPage = () => {
   const [titulos, setTitulos] = useState<ITitulo[]>([]);
@@ -69,7 +71,7 @@ export const TitulosListPage = () => {
     try {
       const dataHoje = new Date().toISOString().split('T')[0];
       // Create conta
-      const { data: conta } = await apiClient.post('/contas', {
+      await apiClient.post('/contas', {
         nome: "Conta Corrente",
         saldoInicial: 1000.00,
         tipo: "CORRENTE",
