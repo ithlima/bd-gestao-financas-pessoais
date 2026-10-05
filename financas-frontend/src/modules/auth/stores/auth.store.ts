@@ -21,3 +21,14 @@ export const useAuthStore = create<IAuthUiState>()((set) => ({
     set({ token: null, isAuthenticated: false });
   },
 }));
+
+export const getUsuarioIdFromToken = (): number | null => {
+  const token = useAuthStore.getState().token;
+  if (!token) return null;
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return parseInt(payload.sub, 10);
+  } catch (e) {
+    return null;
+  }
+};

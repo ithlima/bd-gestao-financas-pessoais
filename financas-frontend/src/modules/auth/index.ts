@@ -1,2 +1,3 @@
 export { LoginPage } from './pages/login/login';
-export { useAuthStore } from './stores/auth.store';
+export { RegisterPage } from './pages/register/register';
+export { useAuthStore, getUsuarioIdFromToken } from './stores/auth.store';

@@ -35,5 +35,20 @@ export const titulosService = {
       usuarioId
     });
     return data;
+  },
+
+  receber: async (id: number, valor: number, dataRecebimento: string, contaId: number, usuarioId: number): Promise<ITitulo> => {
+    const { data } = await apiClient.post<ITitulo>(`/titulos/${id}/receber`, {
+      valor,
+      data: dataRecebimento,
+      contaId,
+      usuarioId
+    });
+    return data;
+  },
+
+  cancelar: async (id: number): Promise<ITitulo> => {
+    const { data } = await apiClient.post<ITitulo>(`/titulos/${id}/cancelar`);
+    return data;
   }
 };
