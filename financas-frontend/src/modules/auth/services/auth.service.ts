@@ -14,4 +14,8 @@ export const authService = {
     const { data } = await apiClient.post<ILoginResponse>('/auth/login', credentials);
     return data;
   },
+  register: async (userData: any): Promise<any> => {
+    const res = await apiClient.post('/usuarios', userData);
+    return res.data;
+  },
 };
