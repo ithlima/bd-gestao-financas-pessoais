@@ -1,6 +1,8 @@
 package com.example.financas.controller;
 
 import com.example.financas.dto.request.MovimentacaoRequest;
+import com.example.financas.dto.request.TransferenciaRequest;
+import com.example.financas.dto.response.TransferenciaResponse;
 import com.example.financas.dto.response.MovimentacaoResponse;
 import com.example.financas.entity.TipoMovimentacao;
 import com.example.financas.service.MovimentacaoService;
@@ -10,6 +12,8 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import com.example.financas.entity.Usuario;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -102,8 +106,18 @@ public class MovimentacaoController {
       description = "Exclui a movimentação e, se ela pertencer a um título, reabre o título se necessário."
   )
   @DeleteMapping("/{id}")
-  public ResponseEntity<Void> estornar(@PathVariable Long id) {
-    movimentacaoService.estornar(id);
+  public ResponseEntity<Void> estornar(@PathVariable Long id, @AuthenticationPrincipal Usuario usuario) {
+    movimentacaoService.estornar(id, usuario.getIdUsuario());
     return ResponseEntity.noContent().build();
+  }
+
+  @Operation(
+      summary = "Transfere dinheiro entre duas contas do usuário"
+  )
+  @PostMapping("/transferir")
+  public ResponseEntity<TransferenciaResponse> transferir(
+      @Valid @RequestBody TransferenciaRequest request,
+      @AuthenticationPrincipal Usuario usuario) {
+    return ResponseEntity.ok(movimentacaoService.transferir(request, usuario.getIdUsuario()));
   }
 }

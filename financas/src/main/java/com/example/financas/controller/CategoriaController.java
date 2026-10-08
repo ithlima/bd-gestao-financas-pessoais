@@ -11,6 +11,8 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import com.example.financas.entity.Usuario;
 
 import java.util.List;
 
@@ -76,9 +78,8 @@ public class CategoriaController {
           **Erros:** 400, 404 ou 409 nas mesmas condições do cadastro.
           """)
   @PutMapping("/{id}")
-  public CategoriaResponse atualizar(
-      @PathVariable Long id, @Valid @RequestBody CategoriaRequest request) {
-    return categoriaService.atualizar(id, request);
+  public CategoriaResponse atualizar(@PathVariable Long id, @Valid @RequestBody CategoriaRequest request, @AuthenticationPrincipal Usuario usuario) {
+    return categoriaService.atualizar(id, request, usuario.getIdUsuario());
   }
 
   @Operation(
@@ -96,8 +97,8 @@ public class CategoriaController {
   @RespostasDeErro.Conflito
   @RespostasDeErro.NaoEncontrado
   @DeleteMapping("/{id}")
-  public ResponseEntity<Void> remover(@PathVariable Long id) {
-    categoriaService.remover(id);
+  public ResponseEntity<Void> remover(@PathVariable Long id, @AuthenticationPrincipal Usuario usuario) {
+    categoriaService.remover(id, usuario.getIdUsuario());
     return ResponseEntity.noContent().build();
   }
 }

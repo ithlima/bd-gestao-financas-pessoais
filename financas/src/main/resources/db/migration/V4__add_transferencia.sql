@@ -1,0 +1,2 @@
+ALTER TABLE movimentacao ADD COLUMN is_transferencia BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE movimentacao MODIFY COLUMN categoria_id BIGINT;

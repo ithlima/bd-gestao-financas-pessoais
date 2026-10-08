@@ -58,11 +58,12 @@ public class Movimentacao {
       foreignKey = @ForeignKey(name = "fk_movimentacao_usuario"))
   private Usuario usuario;
 
-  @NotNull(message = "A categoria é obrigatória")
-  @ManyToOne(fetch = FetchType.LAZY, optional = false)
+  @Column(name = "is_transferencia", nullable = false)
+  private Boolean isTransferencia = false;
+
+  @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(
       name = "categoria_id",
-      nullable = false,
       foreignKey = @ForeignKey(name = "fk_movimentacao_categoria"))
   private Categoria categoria;
 

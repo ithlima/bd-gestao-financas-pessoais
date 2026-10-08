@@ -18,6 +18,8 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import com.example.financas.entity.Usuario;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -153,8 +155,8 @@ public class TituloController {
           """)
   @PutMapping("/{id}")
   public TituloResponse atualizar(
-      @PathVariable Long id, @Valid @RequestBody TituloRequest request) {
-    return tituloService.atualizar(id, request);
+      @PathVariable Long id, @Valid @RequestBody TituloRequest request, @AuthenticationPrincipal Usuario usuario) {
+    return tituloService.atualizar(id, request, usuario.getIdUsuario());
   }
 
   @Operation(
@@ -308,8 +310,8 @@ public class TituloController {
             schema = @Schema(implementation = ErroResponse.class)))
   })
   @PostMapping("/{id}/cancelar")
-  public TituloResponse cancelar(@PathVariable Long id) {
-    return tituloService.cancelar(id);
+  public TituloResponse cancelar(@PathVariable Long id, @AuthenticationPrincipal Usuario usuario) {
+    return tituloService.cancelar(id, usuario.getIdUsuario());
   }
 
   @Operation(
@@ -327,8 +329,8 @@ public class TituloController {
           **Erros:** 404 se o id não existir; 422 se houver movimentações vinculadas.
           """)
   @DeleteMapping("/{id}")
-  public ResponseEntity<Void> remover(@PathVariable Long id) {
-    tituloService.remover(id);
+  public ResponseEntity<Void> remover(@PathVariable Long id, @AuthenticationPrincipal Usuario usuario) {
+    tituloService.remover(id, usuario.getIdUsuario());
     return ResponseEntity.noContent().build();
   }
 }

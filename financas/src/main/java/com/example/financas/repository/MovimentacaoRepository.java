@@ -55,6 +55,7 @@ public interface MovimentacaoRepository extends JpaRepository<Movimentacao, Long
             JOIN categoria c ON c.id_categoria = m.categoria_id
            WHERE m.usuario_id = :usuarioId
              AND m.data BETWEEN :inicio AND :fim
+             AND m.is_transferencia = false
            GROUP BY m.categoria_id, c.nome, m.tipo
            ORDER BY c.nome
           """,

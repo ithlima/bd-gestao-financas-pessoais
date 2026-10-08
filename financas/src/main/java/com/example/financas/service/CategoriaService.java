@@ -72,7 +72,7 @@ public class CategoriaService {
   }
 
   @Transactional
-  public CategoriaResponse atualizar(Long id, CategoriaRequest request) {
+  public CategoriaResponse atualizar(Long id, CategoriaRequest request, Long usuarioId) {
     Categoria categoria = buscarEntidade(id);
 
     if (!categoria.getNome().equals(request.nome())
@@ -89,7 +89,7 @@ public class CategoriaService {
   }
 
   @Transactional
-  public void remover(Long id) {
+  public void remover(Long id, Long usuarioId) {
     Categoria categoria = buscarEntidade(id);
 
     long titulos = tituloRepository.countByCategoriaIdCategoria(id);

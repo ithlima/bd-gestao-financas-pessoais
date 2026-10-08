@@ -105,7 +105,7 @@ public class TituloService {
   }
 
   @Transactional
-  public TituloResponse atualizar(Long id, TituloRequest request) {
+  public TituloResponse atualizar(Long id, TituloRequest request, Long usuarioId) {
     Titulo titulo = buscarEntidade(id);
 
     if (titulo.getSituacao() == SituacaoTitulo.CANCELADO) {
@@ -148,7 +148,7 @@ public class TituloService {
   }
 
   @Transactional
-  public TituloResponse cancelar(Long id) {
+  public TituloResponse cancelar(Long id, Long usuarioId) {
     Titulo titulo = buscarEntidade(id);
 
     if (titulo.getSituacao() == SituacaoTitulo.CANCELADO) {
@@ -172,7 +172,7 @@ public class TituloService {
   }
 
   @Transactional
-  public void remover(Long id) {
+  public void remover(Long id, Long usuarioId) {
     Titulo titulo = buscarEntidade(id);
 
     if (movimentacaoService.temMovimentacaoVinculada(id)) {

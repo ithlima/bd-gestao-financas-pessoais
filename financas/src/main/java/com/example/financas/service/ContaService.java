@@ -71,7 +71,7 @@ public class ContaService {
   }
 
   @Transactional
-  public ContaResponse atualizar(Long id, ContaRequest request) {
+  public ContaResponse atualizar(Long id, ContaRequest request, Long usuarioId) {
     Conta conta = buscarEntidade(id);
 
     if (!conta.getNome().equals(request.nome())
@@ -89,7 +89,7 @@ public class ContaService {
   }
 
   @Transactional
-  public void remover(Long id) {
+  public void remover(Long id, Long usuarioId) {
     Conta conta = buscarEntidade(id);
 
     long movimentacoes = movimentacaoRepository.countByContaIdConta(id);

@@ -12,6 +12,8 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import com.example.financas.entity.Usuario;
 
 import java.util.List;
 
@@ -94,8 +96,8 @@ public class ContaController {
           **Erros:** 400, 404 ou 409 nas mesmas condições do cadastro.
           """)
   @PutMapping("/{id}")
-  public ContaResponse atualizar(@PathVariable Long id, @Valid @RequestBody ContaRequest request) {
-    return contaService.atualizar(id, request);
+  public ContaResponse atualizar(@PathVariable Long id, @Valid @RequestBody ContaRequest request, @AuthenticationPrincipal Usuario usuario) {
+    return contaService.atualizar(id, request, usuario.getIdUsuario());
   }
 
   @Operation(
@@ -112,8 +114,8 @@ public class ContaController {
   @RespostasDeErro.Conflito
   @RespostasDeErro.NaoEncontrado
   @DeleteMapping("/{id}")
-  public ResponseEntity<Void> remover(@PathVariable Long id) {
-    contaService.remover(id);
+  public ResponseEntity<Void> remover(@PathVariable Long id, @AuthenticationPrincipal Usuario usuario) {
+    contaService.remover(id, usuario.getIdUsuario());
     return ResponseEntity.noContent().build();
   }
 }

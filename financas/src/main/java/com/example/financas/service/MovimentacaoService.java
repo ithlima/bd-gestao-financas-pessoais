@@ -6,6 +6,8 @@ import com.example.financas.entity.Categoria;
 import com.example.financas.entity.Conta;
 import com.example.financas.entity.Movimentacao;
 import com.example.financas.entity.SituacaoTitulo;
+import com.example.financas.dto.request.TransferenciaRequest;
+import com.example.financas.dto.response.TransferenciaResponse;
 import com.example.financas.entity.TipoMovimentacao;
 import com.example.financas.entity.Titulo;
 import com.example.financas.entity.Usuario;
@@ -188,8 +190,9 @@ public class MovimentacaoService {
   }
 
   @Transactional
-  public void estornar(Long id) {
+  public void estornar(Long id, Long usuarioId) {
     Movimentacao movimentacao = buscarEntidade(id);
+    if (!movimentacao.getUsuario().getIdUsuario().equals(usuarioId)) throw new RegraNegocioException("Acesso negado");
     Titulo titulo = movimentacao.getTitulo();
     
     movimentacaoRepository.delete(movimentacao);
@@ -202,5 +205,50 @@ public class MovimentacaoService {
         tituloRepository.save(titulo);
       }
     }
+  }
+
+  @Transactional
+  public TransferenciaResponse transferir(TransferenciaRequest request, Long usuarioId) {
+    if (request.contaOrigemId().equals(request.contaDestinoId())) {
+      throw new RegraNegocioException("A conta de origem não pode ser a mesma de destino");
+    }
+
+    Conta contaOrigem = contaService.validarContaDoUsuario(request.contaOrigemId(), usuarioId);
+    Conta contaDestino = contaService.validarContaDoUsuario(request.contaDestinoId(), usuarioId);
+    Usuario usuario = contaOrigem.getUsuario();
+
+    String descricao = request.descricao() != null && !request.descricao().trim().isEmpty() 
+        ? request.descricao() 
+        : "Transferência";
+
+    Movimentacao saida = new Movimentacao();
+    saida.setConta(contaOrigem);
+    saida.setUsuario(usuario);
+    saida.setTipo(TipoMovimentacao.DESPESA);
+    saida.setValor(request.valor());
+    saida.setData(request.data());
+    saida.setDescricao(descricao + " para " + contaDestino.getNome());
+    saida.setIsTransferencia(true);
+    saida = movimentacaoRepository.save(saida);
+
+    Movimentacao entrada = new Movimentacao();
+    entrada.setConta(contaDestino);
+    entrada.setUsuario(usuario);
+    entrada.setTipo(TipoMovimentacao.RECEITA);
+    entrada.setValor(request.valor());
+    entrada.setData(request.data());
+    entrada.setDescricao(descricao + " de " + contaOrigem.getNome());
+    entrada.setIsTransferencia(true);
+    entrada = movimentacaoRepository.save(entrada);
+
+    return new TransferenciaResponse(
+        saida.getIdMovimentacao(),
+        entrada.getIdMovimentacao(),
+        contaOrigem.getIdConta(),
+        contaDestino.getIdConta(),
+        request.valor(),
+        request.data(),
+        descricao
+    );
   }
 }
