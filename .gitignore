@@ -1,4 +1,4 @@
-﻿# Arquivos de IDE e ambiente local
+# Arquivos de IDE e ambiente local
 
 .vscode/
 .idea/
@@ -14,3 +14,7 @@
 
 target/
 *.log
+*.class
+*.py
+*.pyc
+__pycache__/

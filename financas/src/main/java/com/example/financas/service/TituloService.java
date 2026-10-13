@@ -107,6 +107,9 @@ public class TituloService {
   @Transactional
   public TituloResponse atualizar(Long id, TituloRequest request, Long usuarioId) {
     Titulo titulo = buscarEntidade(id);
+    if (usuarioId != null && !titulo.getUsuario().getIdUsuario().equals(usuarioId)) {
+      throw new RegraNegocioException("Acesso negado");
+    }
 
     if (titulo.getSituacao() == SituacaoTitulo.CANCELADO) {
       throw new RegraNegocioException("Um título cancelado não pode ser alterado");
@@ -150,6 +153,9 @@ public class TituloService {
   @Transactional
   public TituloResponse cancelar(Long id, Long usuarioId) {
     Titulo titulo = buscarEntidade(id);
+    if (usuarioId != null && !titulo.getUsuario().getIdUsuario().equals(usuarioId)) {
+      throw new RegraNegocioException("Acesso negado");
+    }
 
     if (titulo.getSituacao() == SituacaoTitulo.CANCELADO) {
       throw new RegraNegocioException("Este título já está cancelado");
@@ -174,6 +180,9 @@ public class TituloService {
   @Transactional
   public void remover(Long id, Long usuarioId) {
     Titulo titulo = buscarEntidade(id);
+    if (usuarioId != null && !titulo.getUsuario().getIdUsuario().equals(usuarioId)) {
+      throw new RegraNegocioException("Acesso negado");
+    }
 
     if (movimentacaoService.temMovimentacaoVinculada(id)) {
       throw new RegraNegocioException(
@@ -199,7 +208,7 @@ public class TituloService {
     Titulo titulo = tituloRepository.findByIdWithLock(id)
         .orElseThrow(() -> RecursoNaoEncontradoException.porId("Título", id, false));
 
-    if (!titulo.getUsuario().getIdUsuario().equals(usuarioId)) {
+    if (usuarioId != null && !titulo.getUsuario().getIdUsuario().equals(usuarioId)) {
       throw new RegraNegocioException("Este título pertence a outro usuário");
     }
 

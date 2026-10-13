@@ -136,6 +136,13 @@ public class MovimentacaoService {
     if (titulo.getSituacao() == SituacaoTitulo.PAGO) {
       throw new RegraNegocioException("Este título já está quitado");
     }
+
+    BigDecimal emAberto =
+        titulo.getValorPrevisto().subtract(totalRealizadoDoTitulo(titulo.getIdTitulo()));
+    if (valor.compareTo(emAberto) > 0) {
+      throw new RegraNegocioException(
+          "O valor informado (" + valor + ") é maior que o valor em aberto (" + emAberto + ")");
+    }
   }
 
   private void quitarTituloSeTotalmenteRealizado(Titulo titulo) {
@@ -192,7 +199,9 @@ public class MovimentacaoService {
   @Transactional
   public void estornar(Long id, Long usuarioId) {
     Movimentacao movimentacao = buscarEntidade(id);
-    if (!movimentacao.getUsuario().getIdUsuario().equals(usuarioId)) throw new RegraNegocioException("Acesso negado");
+    if (usuarioId != null && !movimentacao.getUsuario().getIdUsuario().equals(usuarioId)) {
+      throw new RegraNegocioException("Acesso negado");
+    }
     Titulo titulo = movimentacao.getTitulo();
     
     movimentacaoRepository.delete(movimentacao);

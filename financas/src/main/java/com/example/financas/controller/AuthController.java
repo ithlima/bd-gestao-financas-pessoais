@@ -33,6 +33,9 @@ public class AuthController {
   public record LoginRequest(String email, String senha) {}
   public record LoginResponse(String token) {}
 
+  @io.swagger.v3.oas.annotations.Operation(
+      summary = "Realiza login do usuário",
+      description = "Autentica usuário por email e senha e retorna o token JWT.")
   @PostMapping("/login")
   public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request) {
     Usuario usuario = usuarioRepository.findByEmail(request.email())

@@ -102,16 +102,6 @@ public class MovimentacaoController {
   }
 
   @Operation(
-      summary = "Estorna (remove) uma movimentação",
-      description = "Exclui a movimentação e, se ela pertencer a um título, reabre o título se necessário."
-  )
-  @DeleteMapping("/{id}")
-  public ResponseEntity<Void> estornar(@PathVariable Long id, @AuthenticationPrincipal Usuario usuario) {
-    movimentacaoService.estornar(id, usuario.getIdUsuario());
-    return ResponseEntity.noContent().build();
-  }
-
-  @Operation(
       summary = "Transfere dinheiro entre duas contas do usuário"
   )
   @PostMapping("/transferir")

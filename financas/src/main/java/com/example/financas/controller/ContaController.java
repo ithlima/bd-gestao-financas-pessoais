@@ -97,7 +97,7 @@ public class ContaController {
           """)
   @PutMapping("/{id}")
   public ContaResponse atualizar(@PathVariable Long id, @Valid @RequestBody ContaRequest request, @AuthenticationPrincipal Usuario usuario) {
-    return contaService.atualizar(id, request, usuario.getIdUsuario());
+    return contaService.atualizar(id, request, usuario != null ? usuario.getIdUsuario() : null);
   }
 
   @Operation(
@@ -115,7 +115,7 @@ public class ContaController {
   @RespostasDeErro.NaoEncontrado
   @DeleteMapping("/{id}")
   public ResponseEntity<Void> remover(@PathVariable Long id, @AuthenticationPrincipal Usuario usuario) {
-    contaService.remover(id, usuario.getIdUsuario());
+    contaService.remover(id, usuario != null ? usuario.getIdUsuario() : null);
     return ResponseEntity.noContent().build();
   }
 }

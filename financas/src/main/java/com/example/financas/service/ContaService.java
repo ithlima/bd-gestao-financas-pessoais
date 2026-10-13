@@ -73,6 +73,9 @@ public class ContaService {
   @Transactional
   public ContaResponse atualizar(Long id, ContaRequest request, Long usuarioId) {
     Conta conta = buscarEntidade(id);
+    if (usuarioId != null && !conta.getUsuario().getIdUsuario().equals(usuarioId)) {
+      throw new RegraNegocioException("Acesso negado");
+    }
 
     if (!conta.getNome().equals(request.nome())
         && contaRepository.existsByNomeAndUsuarioIdUsuario(request.nome(), request.usuarioId())) {
@@ -91,6 +94,9 @@ public class ContaService {
   @Transactional
   public void remover(Long id, Long usuarioId) {
     Conta conta = buscarEntidade(id);
+    if (usuarioId != null && !conta.getUsuario().getIdUsuario().equals(usuarioId)) {
+      throw new RegraNegocioException("Acesso negado");
+    }
 
     long movimentacoes = movimentacaoRepository.countByContaIdConta(id);
     if (movimentacoes > 0) {

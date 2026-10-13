@@ -75,6 +75,8 @@ class DocumentacaoOpenApiTest {
           "/api/v1/titulos/{id}/cancelar",
           "/api/v1/movimentacoes",
           "/api/v1/movimentacoes/{id}",
+          "/api/v1/movimentacoes/transferir",
+          "/api/v1/auth/login",
           "/api/v1/dre",
           "/api/v1/resumo-financeiro",
           "/api/v1/contas-a-pagar",

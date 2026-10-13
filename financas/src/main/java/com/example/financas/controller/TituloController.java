@@ -156,7 +156,7 @@ public class TituloController {
   @PutMapping("/{id}")
   public TituloResponse atualizar(
       @PathVariable Long id, @Valid @RequestBody TituloRequest request, @AuthenticationPrincipal Usuario usuario) {
-    return tituloService.atualizar(id, request, usuario.getIdUsuario());
+    return tituloService.atualizar(id, request, usuario != null ? usuario.getIdUsuario() : null);
   }
 
   @Operation(
@@ -216,8 +216,11 @@ public class TituloController {
   })
   @PostMapping("/{id}/pagar")
   public TituloResponse pagar(
-      @PathVariable Long id, @Valid @RequestBody PagamentoRequest request) {
-    return tituloService.pagar(id, request.valor(), request.data(), request.contaId(), request.usuarioId());
+      @PathVariable Long id,
+      @Valid @RequestBody PagamentoRequest request,
+      @AuthenticationPrincipal Usuario usuario) {
+    Long usuarioId = request.usuarioId() != null ? request.usuarioId() : (usuario != null ? usuario.getIdUsuario() : null);
+    return tituloService.pagar(id, request.valor(), request.data(), request.contaId(), usuarioId);
   }
 
   @Operation(
@@ -265,8 +268,11 @@ public class TituloController {
   })
   @PostMapping("/{id}/receber")
   public TituloResponse receber(
-      @PathVariable Long id, @Valid @RequestBody RecebimentoRequest request) {
-    return tituloService.receber(id, request.valor(), request.data(), request.contaId(), request.usuarioId());
+      @PathVariable Long id,
+      @Valid @RequestBody RecebimentoRequest request,
+      @AuthenticationPrincipal Usuario usuario) {
+    Long usuarioId = request.usuarioId() != null ? request.usuarioId() : (usuario != null ? usuario.getIdUsuario() : null);
+    return tituloService.receber(id, request.valor(), request.data(), request.contaId(), usuarioId);
   }
 
   @Operation(
@@ -311,7 +317,7 @@ public class TituloController {
   })
   @PostMapping("/{id}/cancelar")
   public TituloResponse cancelar(@PathVariable Long id, @AuthenticationPrincipal Usuario usuario) {
-    return tituloService.cancelar(id, usuario.getIdUsuario());
+    return tituloService.cancelar(id, usuario != null ? usuario.getIdUsuario() : null);
   }
 
   @Operation(
@@ -330,7 +336,7 @@ public class TituloController {
           """)
   @DeleteMapping("/{id}")
   public ResponseEntity<Void> remover(@PathVariable Long id, @AuthenticationPrincipal Usuario usuario) {
-    tituloService.remover(id, usuario.getIdUsuario());
+    tituloService.remover(id, usuario != null ? usuario.getIdUsuario() : null);
     return ResponseEntity.noContent().build();
   }
 }

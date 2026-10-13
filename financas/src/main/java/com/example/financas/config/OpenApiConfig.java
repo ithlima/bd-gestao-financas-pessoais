@@ -77,6 +77,7 @@ public class OpenApiConfig {
         .components(new Components())
         .tags(
             List.of(
+                new Tag().name("Autenticação").description("Login e autenticação de usuários."),
                 new Tag().name("Usuários").description("Cadastro dos donos dos dados financeiros."),
                 new Tag().name("Contas").description("Onde o dinheiro está. O saldo é calculado, não armazenado."),
                 new Tag().name("Categorias").description("Como o usuário classifica. É a categoria que forma as **linhas da DRE**."),

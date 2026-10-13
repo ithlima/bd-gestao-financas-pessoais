@@ -74,6 +74,9 @@ public class CategoriaService {
   @Transactional
   public CategoriaResponse atualizar(Long id, CategoriaRequest request, Long usuarioId) {
     Categoria categoria = buscarEntidade(id);
+    if (usuarioId != null && !categoria.getUsuario().getIdUsuario().equals(usuarioId)) {
+      throw new RegraNegocioException("Acesso negado");
+    }
 
     if (!categoria.getNome().equals(request.nome())
         && categoriaRepository.existsByNomeAndUsuarioIdUsuario(
@@ -91,6 +94,9 @@ public class CategoriaService {
   @Transactional
   public void remover(Long id, Long usuarioId) {
     Categoria categoria = buscarEntidade(id);
+    if (usuarioId != null && !categoria.getUsuario().getIdUsuario().equals(usuarioId)) {
+      throw new RegraNegocioException("Acesso negado");
+    }
 
     long titulos = tituloRepository.countByCategoriaIdCategoria(id);
     if (titulos > 0) {

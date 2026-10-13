@@ -219,7 +219,7 @@ class RegrasFinanceirasIntegrationTest {
   void naoPermitePagarTituloCancelado() {
     Long idTitulo = criarTituloDespesa("Conta de energia", "150.00", LocalDate.of(2026, 3, 10));
 
-    tituloService.cancelar(idTitulo);
+    tituloService.cancelar(idTitulo, ANA);
 
     RegraNegocioException erro =
         assertThrows(
@@ -456,7 +456,7 @@ class RegrasFinanceirasIntegrationTest {
     tituloService.pagar(pago, new BigDecimal("150.00"), LocalDate.of(2026, 3, 8), CONTA_DA_ANA, ANA);
 
     Long cancelado = criarTituloDespesa("Conta cancelada", "200.00", LocalDate.of(2026, 3, 12));
-    tituloService.cancelar(cancelado);
+    tituloService.cancelar(cancelado, ANA);
 
     criarTituloDespesa("Conta em aberto", "100.00", LocalDate.of(2026, 3, 20));
 

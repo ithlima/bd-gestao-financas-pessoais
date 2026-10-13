@@ -79,7 +79,7 @@ public class CategoriaController {
           """)
   @PutMapping("/{id}")
   public CategoriaResponse atualizar(@PathVariable Long id, @Valid @RequestBody CategoriaRequest request, @AuthenticationPrincipal Usuario usuario) {
-    return categoriaService.atualizar(id, request, usuario.getIdUsuario());
+    return categoriaService.atualizar(id, request, usuario != null ? usuario.getIdUsuario() : null);
   }
 
   @Operation(
@@ -98,7 +98,7 @@ public class CategoriaController {
   @RespostasDeErro.NaoEncontrado
   @DeleteMapping("/{id}")
   public ResponseEntity<Void> remover(@PathVariable Long id, @AuthenticationPrincipal Usuario usuario) {
-    categoriaService.remover(id, usuario.getIdUsuario());
+    categoriaService.remover(id, usuario != null ? usuario.getIdUsuario() : null);
     return ResponseEntity.noContent().build();
   }
 }
