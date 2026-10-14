@@ -5,6 +5,8 @@ import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Contact;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.info.License;
+import io.swagger.v3.oas.models.security.SecurityRequirement;
+import io.swagger.v3.oas.models.security.SecurityScheme;
 import io.swagger.v3.oas.models.tags.Tag;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -73,8 +75,17 @@ public class OpenApiConfig {
                     """)
                 .contact(new Contact().name("Projeto acadêmico").url("https://github.com/ithlima/bd-gestao-financas-pessoais"))
                 .license(new License().name("Projeto acadêmico")))
-
-        .components(new Components())
+        .addSecurityItem(new SecurityRequirement().addList("bearerAuth"))
+        .components(
+            new Components()
+                .addSecuritySchemes(
+                    "bearerAuth",
+                    new SecurityScheme()
+                        .name("bearerAuth")
+                        .type(SecurityScheme.Type.HTTP)
+                        .scheme("bearer")
+                        .bearerFormat("JWT")
+                        .description("Insira o token JWT gerado pelo endpoint /api/v1/auth/login")))
         .tags(
             List.of(
                 new Tag().name("Autenticação").description("Login e autenticação de usuários."),
