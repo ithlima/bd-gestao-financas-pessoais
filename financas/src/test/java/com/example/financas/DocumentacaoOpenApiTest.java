@@ -61,6 +61,7 @@ class DocumentacaoOpenApiTest {
   private static final List<String> CAMINHOS_ESPERADOS =
       List.of(
           "/api/v1/usuarios",
+          "/api/v1/usuarios/me",
           "/api/v1/usuarios/{id}",
           "/api/v1/contas",
           "/api/v1/contas/{id}",

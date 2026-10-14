@@ -46,7 +46,15 @@ public class ContaService {
 
   @Transactional(readOnly = true)
   public ContaResponse buscarPorId(Long id) {
+    return buscarPorId(id, null);
+  }
+
+  @Transactional(readOnly = true)
+  public ContaResponse buscarPorId(Long id, Long usuarioId) {
     Conta conta = buscarEntidade(id);
+    if (usuarioId != null && !conta.getUsuario().getIdUsuario().equals(usuarioId)) {
+      throw new RegraNegocioException("Acesso negado: esta conta pertence a outro usuário");
+    }
     BigDecimal saldo = buscarSaldoDaConta(conta);
     return ContaMapper.toResponse(conta, saldo);
   }

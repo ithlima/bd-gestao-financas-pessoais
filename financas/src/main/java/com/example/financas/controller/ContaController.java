@@ -44,16 +44,21 @@ public class ContaController {
           fica desatualizado.
           """)
   @GetMapping
-  public List<ContaResponse> listar(@RequestParam Long usuarioId) {
-    return contaService.listar(usuarioId);
+  public List<ContaResponse> listar(
+      @RequestParam Long usuarioId,
+      @AuthenticationPrincipal Usuario usuario) {
+    Long idFinal = com.example.financas.config.SecurityUtils.validarUsuario(usuarioId, usuario);
+    return contaService.listar(idFinal);
   }
 
   @Operation(
       summary = "Busca uma conta por id, com o saldo",
       description = "Responde 404 se o id não existir.")
   @GetMapping("/{id}")
-  public ContaResponse buscarPorId(@PathVariable Long id) {
-    return contaService.buscarPorId(id);
+  public ContaResponse buscarPorId(
+      @PathVariable Long id,
+      @AuthenticationPrincipal Usuario usuario) {
+    return contaService.buscarPorId(id, usuario != null ? usuario.getIdUsuario() : null);
   }
 
   @Operation(
@@ -66,7 +71,10 @@ public class ContaController {
           aconteceram**. Títulos ainda pendentes não estão aqui.
           """)
   @GetMapping("/{id}/extrato")
-  public List<MovimentacaoResponse> extrato(@PathVariable Long id) {
+  public List<MovimentacaoResponse> extrato(
+      @PathVariable Long id,
+      @AuthenticationPrincipal Usuario usuario) {
+    contaService.validarContaDoUsuario(id, usuario != null ? usuario.getIdUsuario() : null);
     return movimentacaoService.extratoDaConta(id);
   }
 
@@ -82,8 +90,12 @@ public class ContaController {
           409 se já houver uma conta com o mesmo nome para o usuário.
           """)
   @PostMapping
-  public ResponseEntity<ContaResponse> criar(@Valid @RequestBody ContaRequest request) {
-    return ResponseEntity.status(HttpStatus.CREATED).body(contaService.criar(request));
+  public ResponseEntity<ContaResponse> criar(
+      @Valid @RequestBody ContaRequest request,
+      @AuthenticationPrincipal Usuario usuario) {
+    Long idFinal = com.example.financas.config.SecurityUtils.validarUsuario(request.usuarioId(), usuario);
+    ContaRequest requestSegura = new ContaRequest(request.nome(), request.tipo(), request.saldoInicial(), idFinal);
+    return ResponseEntity.status(HttpStatus.CREATED).body(contaService.criar(requestSegura));
   }
 
   @Operation(

@@ -1,14 +1,18 @@
 package com.example.financas.controller;
 
 import com.example.financas.config.RespostasDeErro;
+import com.example.financas.config.SecurityUtils;
 import com.example.financas.dto.request.UsuarioRequest;
 import com.example.financas.dto.response.UsuarioResponse;
+import com.example.financas.entity.Usuario;
+import com.example.financas.exception.RegraNegocioException;
 import com.example.financas.service.UsuarioService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -26,15 +30,32 @@ public class UsuarioController {
 
   @Operation(
       summary = "Lista os usuários",
-      description = "Devolve todos os usuários cadastrados. A senha nunca é incluída na resposta.")
+      description = "Devolve todos os usuários cadastrados ou apenas o autenticado.")
   @GetMapping
-  public List<UsuarioResponse> listar() {
+  public List<UsuarioResponse> listar(@AuthenticationPrincipal Usuario usuario) {
+    if (usuario != null) {
+      return List.of(usuarioService.buscarPorId(usuario.getIdUsuario()));
+    }
     return usuarioService.listar();
+  }
+
+  @Operation(
+      summary = "Obtém dados do usuário autenticado",
+      description = "Retorna os dados do usuário atualmente logado.")
+  @GetMapping("/me")
+  public UsuarioResponse me(@AuthenticationPrincipal Usuario usuario) {
+    if (usuario == null) {
+      throw new RegraNegocioException("Usuário não autenticado");
+    }
+    return usuarioService.buscarPorId(usuario.getIdUsuario());
   }
 
   @Operation(summary = "Busca um usuário por id", description = "Responde 404 se o id não existir.")
   @GetMapping("/{id}")
-  public UsuarioResponse buscarPorId(@PathVariable Long id) {
+  public UsuarioResponse buscarPorId(
+      @PathVariable Long id,
+      @AuthenticationPrincipal Usuario usuario) {
+    SecurityUtils.validarUsuario(id, usuario);
     return usuarioService.buscarPorId(id);
   }
 
@@ -64,7 +85,10 @@ public class UsuarioController {
           """)
   @PutMapping("/{id}")
   public UsuarioResponse atualizar(
-      @PathVariable Long id, @Valid @RequestBody UsuarioRequest request) {
+      @PathVariable Long id,
+      @Valid @RequestBody UsuarioRequest request,
+      @AuthenticationPrincipal Usuario usuario) {
+    SecurityUtils.validarUsuario(id, usuario);
     return usuarioService.atualizar(id, request);
   }
 
@@ -81,7 +105,10 @@ public class UsuarioController {
   @RespostasDeErro.Conflito
   @RespostasDeErro.NaoEncontrado
   @DeleteMapping("/{id}")
-  public ResponseEntity<Void> remover(@PathVariable Long id) {
+  public ResponseEntity<Void> remover(
+      @PathVariable Long id,
+      @AuthenticationPrincipal Usuario usuario) {
+    SecurityUtils.validarUsuario(id, usuario);
     usuarioService.remover(id);
     return ResponseEntity.noContent().build();
   }

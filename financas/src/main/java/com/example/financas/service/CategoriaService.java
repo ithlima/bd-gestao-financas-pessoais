@@ -51,7 +51,16 @@ public class CategoriaService {
 
   @Transactional(readOnly = true)
   public CategoriaResponse buscarPorId(Long id) {
-    return CategoriaMapper.toResponse(buscarEntidade(id));
+    return buscarPorId(id, null);
+  }
+
+  @Transactional(readOnly = true)
+  public CategoriaResponse buscarPorId(Long id, Long usuarioId) {
+    Categoria categoria = buscarEntidade(id);
+    if (usuarioId != null && !categoria.getUsuario().getIdUsuario().equals(usuarioId)) {
+      throw new RegraNegocioException("Acesso negado: esta categoria pertence a outro usuário");
+    }
+    return CategoriaMapper.toResponse(categoria);
   }
 
   @Transactional

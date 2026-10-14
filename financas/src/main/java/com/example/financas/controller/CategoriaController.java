@@ -41,14 +41,19 @@ public class CategoriaController {
           """)
   @GetMapping
   public List<CategoriaResponse> listar(
-      @RequestParam Long usuarioId, @RequestParam(required = false) TipoMovimentacao tipo) {
-    return categoriaService.listar(usuarioId, tipo);
+      @RequestParam Long usuarioId,
+      @RequestParam(required = false) TipoMovimentacao tipo,
+      @AuthenticationPrincipal Usuario usuario) {
+    Long idFinal = com.example.financas.config.SecurityUtils.validarUsuario(usuarioId, usuario);
+    return categoriaService.listar(idFinal, tipo);
   }
 
   @Operation(summary = "Busca uma categoria por id", description = "Responde 404 se não existir.")
   @GetMapping("/{id}")
-  public CategoriaResponse buscarPorId(@PathVariable Long id) {
-    return categoriaService.buscarPorId(id);
+  public CategoriaResponse buscarPorId(
+      @PathVariable Long id,
+      @AuthenticationPrincipal Usuario usuario) {
+    return categoriaService.buscarPorId(id, usuario != null ? usuario.getIdUsuario() : null);
   }
 
   @Operation(
@@ -62,8 +67,12 @@ public class CategoriaController {
           uma categoria com o mesmo nome para o mesmo usuário.
           """)
   @PostMapping
-  public ResponseEntity<CategoriaResponse> criar(@Valid @RequestBody CategoriaRequest request) {
-    return ResponseEntity.status(HttpStatus.CREATED).body(categoriaService.criar(request));
+  public ResponseEntity<CategoriaResponse> criar(
+      @Valid @RequestBody CategoriaRequest request,
+      @AuthenticationPrincipal Usuario usuario) {
+    Long idFinal = com.example.financas.config.SecurityUtils.validarUsuario(request.usuarioId(), usuario);
+    CategoriaRequest requestSegura = new CategoriaRequest(request.nome(), request.tipo(), idFinal);
+    return ResponseEntity.status(HttpStatus.CREATED).body(categoriaService.criar(requestSegura));
   }
 
   @Operation(

@@ -53,16 +53,20 @@ public class MovimentacaoController {
       @RequestParam Long usuarioId,
       @RequestParam(required = false) LocalDate inicio,
       @RequestParam(required = false) LocalDate fim,
-      @RequestParam(required = false) TipoMovimentacao tipo) {
-    return movimentacaoService.listar(usuarioId, inicio, fim, tipo);
+      @RequestParam(required = false) TipoMovimentacao tipo,
+      @AuthenticationPrincipal Usuario usuario) {
+    Long idFinal = com.example.financas.config.SecurityUtils.validarUsuario(usuarioId, usuario);
+    return movimentacaoService.listar(idFinal, inicio, fim, tipo);
   }
 
   @Operation(
       summary = "Busca uma movimentação por id",
       description = "Responde 404 se o id não existir.")
   @GetMapping("/{id}")
-  public MovimentacaoResponse buscarPorId(@PathVariable Long id) {
-    return movimentacaoService.buscarPorId(id);
+  public MovimentacaoResponse buscarPorId(
+      @PathVariable Long id,
+      @AuthenticationPrincipal Usuario usuario) {
+    return movimentacaoService.buscarPorId(id, usuario != null ? usuario.getIdUsuario() : null);
   }
 
   @Operation(
@@ -96,9 +100,14 @@ public class MovimentacaoController {
           """)
   @PostMapping
   public ResponseEntity<MovimentacaoResponse> registrar(
-      @Valid @RequestBody MovimentacaoRequest request) {
+      @Valid @RequestBody MovimentacaoRequest request,
+      @AuthenticationPrincipal Usuario usuario) {
+    Long idFinal = com.example.financas.config.SecurityUtils.validarUsuario(request.usuarioId(), usuario);
+    MovimentacaoRequest requestSegura = new MovimentacaoRequest(
+        request.descricao(), request.valor(), request.tipo(), request.data(),
+        request.contaId(), request.categoriaId(), idFinal);
     return ResponseEntity.status(HttpStatus.CREATED)
-        .body(movimentacaoService.registrarAvulsa(request));
+        .body(movimentacaoService.registrarAvulsa(requestSegura));
   }
 
   @Operation(

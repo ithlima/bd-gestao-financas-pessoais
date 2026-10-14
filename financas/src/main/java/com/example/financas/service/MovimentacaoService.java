@@ -68,7 +68,16 @@ public class MovimentacaoService {
 
   @Transactional(readOnly = true)
   public MovimentacaoResponse buscarPorId(Long id) {
-    return MovimentacaoMapper.toResponse(buscarEntidade(id));
+    return buscarPorId(id, null);
+  }
+
+  @Transactional(readOnly = true)
+  public MovimentacaoResponse buscarPorId(Long id, Long usuarioId) {
+    Movimentacao movimentacao = buscarEntidade(id);
+    if (usuarioId != null && !movimentacao.getUsuario().getIdUsuario().equals(usuarioId)) {
+      throw new RegraNegocioException("Acesso negado: esta movimentação pertence a outro usuário");
+    }
+    return MovimentacaoMapper.toResponse(movimentacao);
   }
 
   @Transactional(readOnly = true)

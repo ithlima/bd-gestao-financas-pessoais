@@ -60,7 +60,16 @@ public class TituloService {
 
   @Transactional(readOnly = true)
   public TituloResponse buscarPorId(Long id) {
-    return toResponse(buscarEntidade(id));
+    return buscarPorId(id, null);
+  }
+
+  @Transactional(readOnly = true)
+  public TituloResponse buscarPorId(Long id, Long usuarioId) {
+    Titulo titulo = buscarEntidade(id);
+    if (usuarioId != null && !titulo.getUsuario().getIdUsuario().equals(usuarioId)) {
+      throw new RegraNegocioException("Acesso negado: este título pertence a outro usuário");
+    }
+    return toResponse(titulo);
   }
 
   @Transactional(readOnly = true)

@@ -73,7 +73,9 @@ public class DreController {
       @RequestParam Long usuarioId,
       @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate inicio,
       @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fim,
-      @RequestParam(defaultValue = "comparativo") String modo) {
-    return dreService.gerar(usuarioId, inicio, fim, modo);
+      @RequestParam(defaultValue = "comparativo") String modo,
+      @org.springframework.security.core.annotation.AuthenticationPrincipal com.example.financas.entity.Usuario usuario) {
+    Long idFinal = com.example.financas.config.SecurityUtils.validarUsuario(usuarioId, usuario);
+    return dreService.gerar(idFinal, inicio, fim, modo);
   }
 }

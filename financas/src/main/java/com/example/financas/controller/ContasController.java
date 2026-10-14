@@ -58,8 +58,10 @@ public class ContasController {
       @RequestParam(required = false)
           @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
           LocalDate dataReferencia,
-      @RequestParam(required = false) Integer janelaDias) {
-    return resumoFinanceiroService.resumo(usuarioId, dataReferencia, janelaDias);
+      @RequestParam(required = false) Integer janelaDias,
+      @org.springframework.security.core.annotation.AuthenticationPrincipal com.example.financas.entity.Usuario usuario) {
+    Long idFinal = com.example.financas.config.SecurityUtils.validarUsuario(usuarioId, usuario);
+    return resumoFinanceiroService.resumo(idFinal, dataReferencia, janelaDias);
   }
 
   @Operation(
@@ -101,8 +103,10 @@ public class ContasController {
       @RequestParam(required = false)
           @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
           LocalDate dataReferencia,
-      @RequestParam(required = false) Integer janelaDias) {
-    return resumoFinanceiroService.contasAPagar(usuarioId, dataReferencia, janelaDias);
+      @RequestParam(required = false) Integer janelaDias,
+      @org.springframework.security.core.annotation.AuthenticationPrincipal com.example.financas.entity.Usuario usuario) {
+    Long idFinal = com.example.financas.config.SecurityUtils.validarUsuario(usuarioId, usuario);
+    return resumoFinanceiroService.contasAPagar(idFinal, dataReferencia, janelaDias);
   }
 
   @Operation(
@@ -123,7 +127,9 @@ public class ContasController {
       @RequestParam(required = false)
           @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
           LocalDate dataReferencia,
-      @RequestParam(required = false) Integer janelaDias) {
-    return resumoFinanceiroService.contasAReceber(usuarioId, dataReferencia, janelaDias);
+      @RequestParam(required = false) Integer janelaDias,
+      @org.springframework.security.core.annotation.AuthenticationPrincipal com.example.financas.entity.Usuario usuario) {
+    Long idFinal = com.example.financas.config.SecurityUtils.validarUsuario(usuarioId, usuario);
+    return resumoFinanceiroService.contasAReceber(idFinal, dataReferencia, janelaDias);
   }
 }

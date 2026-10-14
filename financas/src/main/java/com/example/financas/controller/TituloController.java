@@ -61,16 +61,20 @@ public class TituloController {
   public List<TituloResponse> listar(
       @RequestParam Long usuarioId,
       @RequestParam(required = false) TipoMovimentacao tipo,
-      @RequestParam(required = false) SituacaoTitulo situacao) {
-    return tituloService.listar(usuarioId, tipo, situacao);
+      @RequestParam(required = false) SituacaoTitulo situacao,
+      @AuthenticationPrincipal Usuario usuario) {
+    Long idFinal = com.example.financas.config.SecurityUtils.validarUsuario(usuarioId, usuario);
+    return tituloService.listar(idFinal, tipo, situacao);
   }
 
   @Operation(
       summary = "Busca um título por id",
       description = "Responde 404 se o id não existir.")
   @GetMapping("/{id}")
-  public TituloResponse buscarPorId(@PathVariable Long id) {
-    return tituloService.buscarPorId(id);
+  public TituloResponse buscarPorId(
+      @PathVariable Long id,
+      @AuthenticationPrincipal Usuario usuario) {
+    return tituloService.buscarPorId(id, usuario != null ? usuario.getIdUsuario() : null);
   }
 
   @Operation(
@@ -87,9 +91,11 @@ public class TituloController {
   @GetMapping("/vencidos")
   public List<TituloResponse> vencidos(
       @RequestParam Long usuarioId,
-      @RequestParam(required = false) LocalDate referencia) {
+      @RequestParam(required = false) LocalDate referencia,
+      @AuthenticationPrincipal Usuario usuario) {
+    Long idFinal = com.example.financas.config.SecurityUtils.validarUsuario(usuarioId, usuario);
     return tituloService.listarVencidos(
-        usuarioId, referencia != null ? referencia : LocalDate.now());
+        idFinal, referencia != null ? referencia : LocalDate.now());
   }
 
   @Operation(
@@ -136,8 +142,14 @@ public class TituloController {
             schema = @Schema(implementation = ErroResponse.class)))
   })
   @PostMapping
-  public ResponseEntity<TituloResponse> criar(@Valid @RequestBody TituloRequest request) {
-    return ResponseEntity.status(HttpStatus.CREATED).body(tituloService.criar(request));
+  public ResponseEntity<TituloResponse> criar(
+      @Valid @RequestBody TituloRequest request,
+      @AuthenticationPrincipal Usuario usuario) {
+    Long idFinal = com.example.financas.config.SecurityUtils.validarUsuario(request.usuarioId(), usuario);
+    TituloRequest requestSegura = new TituloRequest(
+        request.descricao(), request.valorPrevisto(), request.dataVencimento(),
+        request.tipo(), request.observacao(), request.categoriaId(), idFinal);
+    return ResponseEntity.status(HttpStatus.CREATED).body(tituloService.criar(requestSegura));
   }
 
   @Operation(
