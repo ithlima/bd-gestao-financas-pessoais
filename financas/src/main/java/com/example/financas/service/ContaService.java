@@ -82,11 +82,12 @@ public class ContaService {
   public ContaResponse atualizar(Long id, ContaRequest request, Long usuarioId) {
     Conta conta = buscarEntidade(id);
     if (usuarioId != null && !conta.getUsuario().getIdUsuario().equals(usuarioId)) {
-      throw new RegraNegocioException("Acesso negado");
+      throw new RegraNegocioException("Acesso negado: esta conta pertence a outro usuário");
     }
 
+    Long donoId = conta.getUsuario().getIdUsuario();
     if (!conta.getNome().equals(request.nome())
-        && contaRepository.existsByNomeAndUsuarioIdUsuario(request.nome(), request.usuarioId())) {
+        && contaRepository.existsByNomeAndUsuarioIdUsuario(request.nome(), donoId)) {
       throw new RecursoDuplicadoException(
           "Já existe a conta '" + request.nome() + "' para este usuário");
     }
@@ -103,7 +104,7 @@ public class ContaService {
   public void remover(Long id, Long usuarioId) {
     Conta conta = buscarEntidade(id);
     if (usuarioId != null && !conta.getUsuario().getIdUsuario().equals(usuarioId)) {
-      throw new RegraNegocioException("Acesso negado");
+      throw new RegraNegocioException("Acesso negado: esta conta pertence a outro usuário");
     }
 
     long movimentacoes = movimentacaoRepository.countByContaIdConta(id);
@@ -123,7 +124,7 @@ public class ContaService {
   public Conta validarContaDoUsuario(Long contaId, Long usuarioId) {
     Conta conta = buscarEntidade(contaId);
 
-    if (!conta.getUsuario().getIdUsuario().equals(usuarioId)) {
+    if (usuarioId != null && !conta.getUsuario().getIdUsuario().equals(usuarioId)) {
       throw new RegraNegocioException("A conta informada pertence a outro usuário");
     }
 

@@ -29,6 +29,24 @@ public class SecurityConfig {
         .cors(org.springframework.security.config.Customizer.withDefaults())
         .csrf(csrf -> csrf.disable())
         .sessionManagement(sessao -> sessao.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+        .exceptionHandling(ex -> ex
+            .authenticationEntryPoint((request, response, authException) -> {
+              response.setStatus(jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED);
+              response.setContentType("application/json;charset=UTF-8");
+              String body = String.format(
+                  "{\"timestamp\":\"%s\",\"status\":401,\"erro\":\"Não autenticado\",\"mensagem\":\"Token de autenticação ausente, inválido ou expirado\",\"caminho\":\"%s\",\"detalhes\":[]}",
+                  java.time.LocalDateTime.now().withNano(0), request.getRequestURI());
+              response.getWriter().write(body);
+            })
+            .accessDeniedHandler((request, response, accessDeniedException) -> {
+              response.setStatus(jakarta.servlet.http.HttpServletResponse.SC_FORBIDDEN);
+              response.setContentType("application/json;charset=UTF-8");
+              String body = String.format(
+                  "{\"timestamp\":\"%s\",\"status\":403,\"erro\":\"Acesso negado\",\"mensagem\":\"Você não tem permissão para acessar este recurso\",\"caminho\":\"%s\",\"detalhes\":[]}",
+                  java.time.LocalDateTime.now().withNano(0), request.getRequestURI());
+              response.getWriter().write(body);
+            })
+        )
         .authorizeHttpRequests(autorizacao -> autorizacao
             .requestMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll()
             .requestMatchers(HttpMethod.POST, "/api/v1/usuarios").permitAll() // Permitir registro

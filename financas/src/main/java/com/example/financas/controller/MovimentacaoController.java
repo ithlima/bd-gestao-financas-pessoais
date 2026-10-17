@@ -105,18 +105,41 @@ public class MovimentacaoController {
     Long idFinal = com.example.financas.config.SecurityUtils.validarUsuario(request.usuarioId(), usuario);
     MovimentacaoRequest requestSegura = new MovimentacaoRequest(
         request.descricao(), request.valor(), request.tipo(), request.data(),
-        request.contaId(), request.categoriaId(), idFinal);
+        request.categoriaId(), request.contaId(), idFinal);
     return ResponseEntity.status(HttpStatus.CREATED)
         .body(movimentacaoService.registrarAvulsa(requestSegura));
   }
 
   @Operation(
-      summary = "Transfere dinheiro entre duas contas do usuário"
-  )
+      summary = "Transfere dinheiro entre duas contas do usuário",
+      description =
+          """
+          Realiza a transferência de saldo entre duas contas do mesmo usuário, gerando
+          automaticamente uma movimentação de saída (DESPESA) na conta de origem e uma de
+          entrada (RECEITA) na conta de destino, marcadas como transferência para não
+          distorcer a DRE.
+          """)
   @PostMapping("/transferir")
   public ResponseEntity<TransferenciaResponse> transferir(
       @Valid @RequestBody TransferenciaRequest request,
       @AuthenticationPrincipal Usuario usuario) {
-    return ResponseEntity.ok(movimentacaoService.transferir(request, usuario.getIdUsuario()));
+    Long usuarioId = usuario != null ? usuario.getIdUsuario() : null;
+    return ResponseEntity.ok(movimentacaoService.transferir(request, usuarioId));
+  }
+
+  @Operation(
+      summary = "Estorna uma movimentação realizada",
+      description =
+          """
+          Desfaz uma movimentação realizada. Se a movimentação estava vinculada a um título
+          que havia sido quitado, o título volta automaticamente para a situação PENDENTE
+          caso o saldo realizado restante fique abaixo do valor previsto.
+          """)
+  @PostMapping("/{id}/estornar")
+  public ResponseEntity<Void> estornar(
+      @PathVariable Long id,
+      @AuthenticationPrincipal Usuario usuario) {
+    movimentacaoService.estornar(id, usuario != null ? usuario.getIdUsuario() : null);
+    return ResponseEntity.noContent().build();
   }
 }

@@ -84,14 +84,23 @@ public class CategoriaService {
   public CategoriaResponse atualizar(Long id, CategoriaRequest request, Long usuarioId) {
     Categoria categoria = buscarEntidade(id);
     if (usuarioId != null && !categoria.getUsuario().getIdUsuario().equals(usuarioId)) {
-      throw new RegraNegocioException("Acesso negado");
+      throw new RegraNegocioException("Acesso negado: esta categoria pertence a outro usuário");
     }
 
+    Long donoId = categoria.getUsuario().getIdUsuario();
     if (!categoria.getNome().equals(request.nome())
-        && categoriaRepository.existsByNomeAndUsuarioIdUsuario(
-            request.nome(), request.usuarioId())) {
+        && categoriaRepository.existsByNomeAndUsuarioIdUsuario(request.nome(), donoId)) {
       throw new RecursoDuplicadoException(
           "Já existe a categoria '" + request.nome() + "' para este usuário");
+    }
+
+    if (categoria.getTipo() != request.tipo()) {
+      long titulos = tituloRepository.countByCategoriaIdCategoria(id);
+      long movimentacoes = movimentacaoRepository.countByCategoriaIdCategoria(id);
+      if (titulos > 0 || movimentacoes > 0) {
+        throw new RegraNegocioException(
+            "Não é possível alterar o tipo de uma categoria que já possui títulos ou movimentações vinculados");
+      }
     }
 
     categoria.setNome(request.nome());
@@ -104,7 +113,7 @@ public class CategoriaService {
   public void remover(Long id, Long usuarioId) {
     Categoria categoria = buscarEntidade(id);
     if (usuarioId != null && !categoria.getUsuario().getIdUsuario().equals(usuarioId)) {
-      throw new RegraNegocioException("Acesso negado");
+      throw new RegraNegocioException("Acesso negado: esta categoria pertence a outro usuário");
     }
 
     long titulos = tituloRepository.countByCategoriaIdCategoria(id);

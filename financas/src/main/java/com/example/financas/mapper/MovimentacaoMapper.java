@@ -18,9 +18,8 @@ public final class MovimentacaoMapper {
         movimentacao.getData(),
         movimentacao.getConta().getIdConta(),
         movimentacao.getConta().getNome(),
-        movimentacao.getCategoria().getIdCategoria(),
-        movimentacao.getCategoria().getNome(),
-
+        movimentacao.getCategoria() != null ? movimentacao.getCategoria().getIdCategoria() : null,
+        movimentacao.getCategoria() != null ? movimentacao.getCategoria().getNome() : "Transferência",
         movimentacao.getTitulo() != null ? movimentacao.getTitulo().getIdTitulo() : null,
         movimentacao.getUsuario().getIdUsuario());
   }

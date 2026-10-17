@@ -87,8 +87,12 @@ public class CategoriaController {
           **Erros:** 400, 404 ou 409 nas mesmas condições do cadastro.
           """)
   @PutMapping("/{id}")
-  public CategoriaResponse atualizar(@PathVariable Long id, @Valid @RequestBody CategoriaRequest request, @AuthenticationPrincipal Usuario usuario) {
-    return categoriaService.atualizar(id, request, usuario != null ? usuario.getIdUsuario() : null);
+  public CategoriaResponse atualizar(
+      @PathVariable Long id,
+      @Valid @RequestBody CategoriaRequest request,
+      @AuthenticationPrincipal Usuario usuario) {
+    Long idFinal = com.example.financas.config.SecurityUtils.validarUsuario(request.usuarioId(), usuario);
+    return categoriaService.atualizar(id, request, idFinal);
   }
 
   @Operation(

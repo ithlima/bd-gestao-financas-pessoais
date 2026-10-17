@@ -49,9 +49,17 @@ public class MovimentacaoService {
   public List<MovimentacaoResponse> listar(
       Long usuarioId, LocalDate inicio, LocalDate fim, TipoMovimentacao tipo) {
 
+    if ((inicio != null && fim == null) || (inicio == null && fim != null)) {
+      throw new RegraNegocioException(
+          "Para filtrar por período, informe tanto a data de início quanto a data de fim");
+    }
+    if (inicio != null && inicio.isAfter(fim)) {
+      throw new RegraNegocioException("A data de início não pode ser posterior à data de fim");
+    }
+
     List<Movimentacao> movimentacoes;
 
-    if (inicio != null && fim != null) {
+    if (inicio != null) {
       movimentacoes =
           movimentacaoRepository.findByUsuarioIdUsuarioAndDataBetweenOrderByDataAsc(
               usuarioId, inicio, fim);
@@ -209,17 +217,21 @@ public class MovimentacaoService {
   public void estornar(Long id, Long usuarioId) {
     Movimentacao movimentacao = buscarEntidade(id);
     if (usuarioId != null && !movimentacao.getUsuario().getIdUsuario().equals(usuarioId)) {
-      throw new RegraNegocioException("Acesso negado");
+      throw new RegraNegocioException("Acesso negado: esta movimentação pertence a outro usuário");
     }
     Titulo titulo = movimentacao.getTitulo();
-    
+
     movimentacaoRepository.delete(movimentacao);
-    
+    movimentacaoRepository.flush();
+
     if (titulo != null) {
       BigDecimal realizadoRestante = totalRealizadoDoTitulo(titulo.getIdTitulo());
       if (realizadoRestante.compareTo(titulo.getValorPrevisto()) < 0) {
         titulo.setSituacao(SituacaoTitulo.PENDENTE);
         titulo.setDataPagamento(null);
+        tituloRepository.save(titulo);
+      } else {
+        titulo.setDataPagamento(dataDoUltimoPagamento(titulo.getIdTitulo()));
         tituloRepository.save(titulo);
       }
     }
@@ -233,10 +245,15 @@ public class MovimentacaoService {
 
     Conta contaOrigem = contaService.validarContaDoUsuario(request.contaOrigemId(), usuarioId);
     Conta contaDestino = contaService.validarContaDoUsuario(request.contaDestinoId(), usuarioId);
+
+    if (!contaOrigem.getUsuario().getIdUsuario().equals(contaDestino.getUsuario().getIdUsuario())) {
+      throw new RegraNegocioException("As contas de origem e destino devem pertencer ao mesmo usuário");
+    }
+
     Usuario usuario = contaOrigem.getUsuario();
 
-    String descricao = request.descricao() != null && !request.descricao().trim().isEmpty() 
-        ? request.descricao() 
+    String descricao = request.descricao() != null && !request.descricao().trim().isEmpty()
+        ? request.descricao().trim()
         : "Transferência";
 
     Movimentacao saida = new Movimentacao();

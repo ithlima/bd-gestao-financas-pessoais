@@ -117,7 +117,7 @@ public class TituloService {
   public TituloResponse atualizar(Long id, TituloRequest request, Long usuarioId) {
     Titulo titulo = buscarEntidade(id);
     if (usuarioId != null && !titulo.getUsuario().getIdUsuario().equals(usuarioId)) {
-      throw new RegraNegocioException("Acesso negado");
+      throw new RegraNegocioException("Acesso negado: este título pertence a outro usuário");
     }
 
     if (titulo.getSituacao() == SituacaoTitulo.CANCELADO) {
@@ -148,7 +148,7 @@ public class TituloService {
 
     Categoria categoria =
         categoriaService.validarCategoriaDoLancamento(
-            request.categoriaId(), request.usuarioId(), request.tipo(), "título");
+            request.categoriaId(), titulo.getUsuario().getIdUsuario(), request.tipo(), "título");
 
     titulo.setDescricao(request.descricao());
     titulo.setValorPrevisto(request.valorPrevisto());
@@ -163,7 +163,7 @@ public class TituloService {
   public TituloResponse cancelar(Long id, Long usuarioId) {
     Titulo titulo = buscarEntidade(id);
     if (usuarioId != null && !titulo.getUsuario().getIdUsuario().equals(usuarioId)) {
-      throw new RegraNegocioException("Acesso negado");
+      throw new RegraNegocioException("Acesso negado: este título pertence a outro usuário");
     }
 
     if (titulo.getSituacao() == SituacaoTitulo.CANCELADO) {
@@ -190,7 +190,7 @@ public class TituloService {
   public void remover(Long id, Long usuarioId) {
     Titulo titulo = buscarEntidade(id);
     if (usuarioId != null && !titulo.getUsuario().getIdUsuario().equals(usuarioId)) {
-      throw new RegraNegocioException("Acesso negado");
+      throw new RegraNegocioException("Acesso negado: este título pertence a outro usuário");
     }
 
     if (movimentacaoService.temMovimentacaoVinculada(id)) {

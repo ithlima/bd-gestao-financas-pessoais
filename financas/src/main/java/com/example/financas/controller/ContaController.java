@@ -108,8 +108,12 @@ public class ContaController {
           **Erros:** 400, 404 ou 409 nas mesmas condições do cadastro.
           """)
   @PutMapping("/{id}")
-  public ContaResponse atualizar(@PathVariable Long id, @Valid @RequestBody ContaRequest request, @AuthenticationPrincipal Usuario usuario) {
-    return contaService.atualizar(id, request, usuario != null ? usuario.getIdUsuario() : null);
+  public ContaResponse atualizar(
+      @PathVariable Long id,
+      @Valid @RequestBody ContaRequest request,
+      @AuthenticationPrincipal Usuario usuario) {
+    Long idFinal = com.example.financas.config.SecurityUtils.validarUsuario(request.usuarioId(), usuario);
+    return contaService.atualizar(id, request, idFinal);
   }
 
   @Operation(

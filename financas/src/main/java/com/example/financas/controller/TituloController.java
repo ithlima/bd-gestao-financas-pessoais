@@ -167,8 +167,11 @@ public class TituloController {
           """)
   @PutMapping("/{id}")
   public TituloResponse atualizar(
-      @PathVariable Long id, @Valid @RequestBody TituloRequest request, @AuthenticationPrincipal Usuario usuario) {
-    return tituloService.atualizar(id, request, usuario != null ? usuario.getIdUsuario() : null);
+      @PathVariable Long id,
+      @Valid @RequestBody TituloRequest request,
+      @AuthenticationPrincipal Usuario usuario) {
+    Long idFinal = com.example.financas.config.SecurityUtils.validarUsuario(request.usuarioId(), usuario);
+    return tituloService.atualizar(id, request, idFinal);
   }
 
   @Operation(
@@ -184,14 +187,14 @@ public class TituloController {
           ## Pagamento parcial é permitido
 
           O `valor` pode ser **menor** que o valor previsto. Nesse caso o título continua
-          PENDENTE e o quanto falta aparece em `valorEmAberto`. Ã‰ assim que se registra um
+          PENDENTE e o quanto falta aparece em `valorEmAberto`. É assim que se registra um
           aluguel pago em duas vezes.
 
           "PAGO" significa **quitado**, não "teve algum pagamento".
 
           ## O que esta operação valida
 
-          - o título precisa ser do tipo DESPESA â€” para receita, use `/receber` (422);
+          - o título precisa ser do tipo DESPESA — para receita, use `/receber` (422);
           - o título não pode estar cancelado nem já quitado (422);
           - o valor não pode ultrapassar o que está em aberto (422);
           - a conta precisa pertencer ao mesmo usuário do título (422).
@@ -231,8 +234,8 @@ public class TituloController {
       @PathVariable Long id,
       @Valid @RequestBody PagamentoRequest request,
       @AuthenticationPrincipal Usuario usuario) {
-    Long usuarioId = request.usuarioId() != null ? request.usuarioId() : (usuario != null ? usuario.getIdUsuario() : null);
-    return tituloService.pagar(id, request.valor(), request.data(), request.contaId(), usuarioId);
+    Long idFinal = com.example.financas.config.SecurityUtils.validarUsuario(request.usuarioId(), usuario);
+    return tituloService.pagar(id, request.valor(), request.data(), request.contaId(), idFinal);
   }
 
   @Operation(
@@ -283,8 +286,8 @@ public class TituloController {
       @PathVariable Long id,
       @Valid @RequestBody RecebimentoRequest request,
       @AuthenticationPrincipal Usuario usuario) {
-    Long usuarioId = request.usuarioId() != null ? request.usuarioId() : (usuario != null ? usuario.getIdUsuario() : null);
-    return tituloService.receber(id, request.valor(), request.data(), request.contaId(), usuarioId);
+    Long idFinal = com.example.financas.config.SecurityUtils.validarUsuario(request.usuarioId(), usuario);
+    return tituloService.receber(id, request.valor(), request.data(), request.contaId(), idFinal);
   }
 
   @Operation(
