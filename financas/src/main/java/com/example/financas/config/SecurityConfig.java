@@ -1,5 +1,7 @@
 package com.example.financas.config;
 
+import com.example.financas.dto.response.ErroResponse;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -12,15 +14,18 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import tools.jackson.databind.ObjectMapper;
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
 
   private final SecurityFilter securityFilter;
+  private final ObjectMapper objectMapper;
 
-  public SecurityConfig(SecurityFilter securityFilter) {
+  public SecurityConfig(SecurityFilter securityFilter, ObjectMapper objectMapper) {
     this.securityFilter = securityFilter;
+    this.objectMapper = objectMapper;
   }
 
   @Bean
@@ -31,20 +36,24 @@ public class SecurityConfig {
         .sessionManagement(sessao -> sessao.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .exceptionHandling(ex -> ex
             .authenticationEntryPoint((request, response, authException) -> {
-              response.setStatus(jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED);
+              response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
               response.setContentType("application/json;charset=UTF-8");
-              String body = String.format(
-                  "{\"timestamp\":\"%s\",\"status\":401,\"erro\":\"Não autenticado\",\"mensagem\":\"Token de autenticação ausente, inválido ou expirado\",\"caminho\":\"%s\",\"detalhes\":[]}",
-                  java.time.LocalDateTime.now().withNano(0), request.getRequestURI());
-              response.getWriter().write(body);
+              ErroResponse erro = ErroResponse.of(
+                  401,
+                  "Não autenticado",
+                  "Token de autenticação ausente, inválido ou expirado",
+                  request.getRequestURI());
+              response.getWriter().write(objectMapper.writeValueAsString(erro));
             })
             .accessDeniedHandler((request, response, accessDeniedException) -> {
-              response.setStatus(jakarta.servlet.http.HttpServletResponse.SC_FORBIDDEN);
+              response.setStatus(HttpServletResponse.SC_FORBIDDEN);
               response.setContentType("application/json;charset=UTF-8");
-              String body = String.format(
-                  "{\"timestamp\":\"%s\",\"status\":403,\"erro\":\"Acesso negado\",\"mensagem\":\"Você não tem permissão para acessar este recurso\",\"caminho\":\"%s\",\"detalhes\":[]}",
-                  java.time.LocalDateTime.now().withNano(0), request.getRequestURI());
-              response.getWriter().write(body);
+              ErroResponse erro = ErroResponse.of(
+                  403,
+                  "Acesso negado",
+                  "Você não tem permissão para acessar este recurso",
+                  request.getRequestURI());
+              response.getWriter().write(objectMapper.writeValueAsString(erro));
             })
         )
         .authorizeHttpRequests(autorizacao -> autorizacao

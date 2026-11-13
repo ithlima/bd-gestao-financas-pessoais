@@ -11,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
@@ -194,6 +195,17 @@ public class GlobalExceptionHandler {
 
     return erro(HttpStatus.METHOD_NOT_ALLOWED, "Método não permitido", mensagem, request,
         List.of("rota: " + request.getRequestURI()));
+  }
+
+  @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+  public ResponseEntity<ErroResponse> tratarTipoDeMidiaNaoSuportado(
+      HttpMediaTypeNotSupportedException ex, HttpServletRequest request) {
+    return erro(
+        HttpStatus.UNSUPPORTED_MEDIA_TYPE,
+        "Tipo de mídia não suportado",
+        "O formato do corpo da requisição não é suportado. Envie application/json",
+        request,
+        List.of());
   }
 
   @ExceptionHandler(RecursoDuplicadoException.class)

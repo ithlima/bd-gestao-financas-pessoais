@@ -91,7 +91,7 @@ public class MovimentacaoService {
   @Transactional(readOnly = true)
   public List<MovimentacaoResponse> extratoDaConta(Long contaId) {
     contaService.buscarEntidade(contaId);
-    return movimentacaoRepository.findByContaIdConta(contaId).stream()
+    return movimentacaoRepository.findByContaIdContaOrderByDataAscIdMovimentacaoAsc(contaId).stream()
         .map(MovimentacaoMapper::toResponse)
         .toList();
   }
@@ -219,7 +219,25 @@ public class MovimentacaoService {
     if (usuarioId != null && !movimentacao.getUsuario().getIdUsuario().equals(usuarioId)) {
       throw new RegraNegocioException("Acesso negado: esta movimentação pertence a outro usuário");
     }
-    Titulo titulo = movimentacao.getTitulo();
+
+    if (Boolean.TRUE.equals(movimentacao.getIsTransferencia())) {
+      if (movimentacao.getTransferenciaParId() == null) {
+        throw new RegraNegocioException(
+            "Transferência sem vínculo de contrapartida não pode ser estornada isoladamente");
+      }
+      Movimentacao par = buscarEntidade(movimentacao.getTransferenciaParId());
+      if (usuarioId != null && !par.getUsuario().getIdUsuario().equals(usuarioId)) {
+        throw new RegraNegocioException("Acesso negado: esta transferência pertence a outro usuário");
+      }
+      movimentacaoRepository.delete(movimentacao);
+      movimentacaoRepository.delete(par);
+      movimentacaoRepository.flush();
+      return;
+    }
+
+    Titulo titulo = movimentacao.getTitulo() != null
+        ? tituloRepository.findByIdWithLock(movimentacao.getTitulo().getIdTitulo()).orElse(null)
+        : null;
 
     movimentacaoRepository.delete(movimentacao);
     movimentacaoRepository.flush();
@@ -274,7 +292,11 @@ public class MovimentacaoService {
     entrada.setData(request.data());
     entrada.setDescricao(descricao + " de " + contaOrigem.getNome());
     entrada.setIsTransferencia(true);
+    entrada.setTransferenciaParId(saida.getIdMovimentacao());
     entrada = movimentacaoRepository.save(entrada);
+
+    saida.setTransferenciaParId(entrada.getIdMovimentacao());
+    movimentacaoRepository.save(saida);
 
     return new TransferenciaResponse(
         saida.getIdMovimentacao(),

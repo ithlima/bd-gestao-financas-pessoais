@@ -115,7 +115,8 @@ public class TituloService {
 
   @Transactional
   public TituloResponse atualizar(Long id, TituloRequest request, Long usuarioId) {
-    Titulo titulo = buscarEntidade(id);
+    Titulo titulo = tituloRepository.findByIdWithLock(id)
+        .orElseThrow(() -> RecursoNaoEncontradoException.porId("Título", id, false));
     if (usuarioId != null && !titulo.getUsuario().getIdUsuario().equals(usuarioId)) {
       throw new RegraNegocioException("Acesso negado: este título pertence a outro usuário");
     }
@@ -161,7 +162,8 @@ public class TituloService {
 
   @Transactional
   public TituloResponse cancelar(Long id, Long usuarioId) {
-    Titulo titulo = buscarEntidade(id);
+    Titulo titulo = tituloRepository.findByIdWithLock(id)
+        .orElseThrow(() -> RecursoNaoEncontradoException.porId("Título", id, false));
     if (usuarioId != null && !titulo.getUsuario().getIdUsuario().equals(usuarioId)) {
       throw new RegraNegocioException("Acesso negado: este título pertence a outro usuário");
     }
@@ -188,7 +190,8 @@ public class TituloService {
 
   @Transactional
   public void remover(Long id, Long usuarioId) {
-    Titulo titulo = buscarEntidade(id);
+    Titulo titulo = tituloRepository.findByIdWithLock(id)
+        .orElseThrow(() -> RecursoNaoEncontradoException.porId("Título", id, false));
     if (usuarioId != null && !titulo.getUsuario().getIdUsuario().equals(usuarioId)) {
       throw new RegraNegocioException("Acesso negado: este título pertence a outro usuário");
     }

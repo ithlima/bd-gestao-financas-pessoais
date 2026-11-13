@@ -52,7 +52,8 @@ public class AuthController {
   @PostMapping("/login")
   public ResponseEntity<?> login(
       @Valid @RequestBody LoginRequest request, HttpServletRequest httpRequest) {
-    Usuario usuario = usuarioRepository.findByEmail(request.email()).orElse(null);
+    String emailNormalizado = request.email().trim().toLowerCase(java.util.Locale.ROOT);
+    Usuario usuario = usuarioRepository.findByEmail(emailNormalizado).orElse(null);
 
     if (usuario == null || !passwordEncoder.matches(request.senha(), usuario.getSenha())) {
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED)

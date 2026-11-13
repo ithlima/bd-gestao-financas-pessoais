@@ -1,6 +1,7 @@
 package com.example.financas.mapper;
 
 import com.example.financas.dto.response.TituloResponse;
+import com.example.financas.entity.SituacaoTitulo;
 import com.example.financas.entity.Titulo;
 
 import java.math.BigDecimal;
@@ -19,7 +20,9 @@ public final class TituloMapper {
       LocalDate referencia) {
 
     BigDecimal realizado = valorRealizado != null ? valorRealizado : BigDecimal.ZERO;
-    BigDecimal emAberto = titulo.getValorPrevisto().subtract(realizado);
+    BigDecimal emAberto = titulo.getSituacao() == SituacaoTitulo.CANCELADO
+        ? BigDecimal.ZERO
+        : titulo.getValorPrevisto().subtract(realizado).max(BigDecimal.ZERO);
 
     return new TituloResponse(
         titulo.getIdTitulo(),

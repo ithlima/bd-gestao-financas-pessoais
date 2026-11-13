@@ -30,13 +30,11 @@ public class UsuarioController {
 
   @Operation(
       summary = "Lista os usuários",
-      description = "Devolve todos os usuários cadastrados ou apenas o autenticado.")
+      description = "Devolve apenas os dados do usuário autenticado.")
   @GetMapping
   public List<UsuarioResponse> listar(@AuthenticationPrincipal Usuario usuario) {
-    if (usuario != null) {
-      return List.of(usuarioService.buscarPorId(usuario.getIdUsuario()));
-    }
-    return usuarioService.listar();
+    Long id = SecurityUtils.exigirAutenticado(usuario);
+    return List.of(usuarioService.buscarPorId(id));
   }
 
   @Operation(
@@ -44,10 +42,8 @@ public class UsuarioController {
       description = "Retorna os dados do usuário atualmente logado.")
   @GetMapping("/me")
   public UsuarioResponse me(@AuthenticationPrincipal Usuario usuario) {
-    if (usuario == null) {
-      throw new RegraNegocioException("Usuário não autenticado");
-    }
-    return usuarioService.buscarPorId(usuario.getIdUsuario());
+    Long id = SecurityUtils.exigirAutenticado(usuario);
+    return usuarioService.buscarPorId(id);
   }
 
   @Operation(summary = "Busca um usuário por id", description = "Responde 404 se o id não existir.")

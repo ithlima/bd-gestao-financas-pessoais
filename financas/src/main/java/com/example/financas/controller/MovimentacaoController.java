@@ -123,7 +123,7 @@ public class MovimentacaoController {
   public ResponseEntity<TransferenciaResponse> transferir(
       @Valid @RequestBody TransferenciaRequest request,
       @AuthenticationPrincipal Usuario usuario) {
-    Long usuarioId = usuario != null ? usuario.getIdUsuario() : null;
+    Long usuarioId = com.example.financas.config.SecurityUtils.exigirAutenticado(usuario);
     return ResponseEntity.ok(movimentacaoService.transferir(request, usuarioId));
   }
 
@@ -134,12 +134,16 @@ public class MovimentacaoController {
           Desfaz uma movimentação realizada. Se a movimentação estava vinculada a um título
           que havia sido quitado, o título volta automaticamente para a situação PENDENTE
           caso o saldo realizado restante fique abaixo do valor previsto.
+
+          Se a movimentação fizer parte de uma transferência entre contas, as duas pontas
+          (saída na origem e entrada no destino) são estornadas juntas.
           """)
   @PostMapping("/{id}/estornar")
   public ResponseEntity<Void> estornar(
       @PathVariable Long id,
       @AuthenticationPrincipal Usuario usuario) {
-    movimentacaoService.estornar(id, usuario != null ? usuario.getIdUsuario() : null);
+    Long usuarioId = com.example.financas.config.SecurityUtils.exigirAutenticado(usuario);
+    movimentacaoService.estornar(id, usuarioId);
     return ResponseEntity.noContent().build();
   }
 }

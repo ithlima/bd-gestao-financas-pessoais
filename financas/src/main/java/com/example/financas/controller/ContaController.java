@@ -74,7 +74,8 @@ public class ContaController {
   public List<MovimentacaoResponse> extrato(
       @PathVariable Long id,
       @AuthenticationPrincipal Usuario usuario) {
-    contaService.validarContaDoUsuario(id, usuario != null ? usuario.getIdUsuario() : null);
+    Long usuarioId = com.example.financas.config.SecurityUtils.exigirAutenticado(usuario);
+    contaService.validarContaDoUsuario(id, usuarioId);
     return movimentacaoService.extratoDaConta(id);
   }
 

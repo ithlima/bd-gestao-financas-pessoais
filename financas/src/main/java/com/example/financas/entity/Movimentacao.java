@@ -61,6 +61,9 @@ public class Movimentacao {
   @Column(name = "is_transferencia", nullable = false)
   private Boolean isTransferencia = false;
 
+  @Column(name = "transferencia_par_id")
+  private Long transferenciaParId;
+
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(
       name = "categoria_id",

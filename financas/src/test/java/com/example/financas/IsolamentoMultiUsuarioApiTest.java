@@ -311,9 +311,101 @@ class IsolamentoMultiUsuarioApiTest {
         .andExpect(status().isUnprocessableEntity())
         .andExpect(jsonPath("$.mensagem").value("Acesso negado: esta movimentação pertence a outro usuário"));
 
-    // Ana consegue estornar sua movimentação
+    // Ana consegue estornar sua movimentação e ambas as contas voltam aos saldos originais
     mockMvc
         .perform(post("/api/v1/movimentacoes/1/estornar").header("Authorization", tokenAna))
         .andExpect(status().isNoContent());
+
+    mockMvc
+        .perform(get("/api/v1/contas/1").header("Authorization", tokenAna))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.saldoAtual").value(1000.0));
+
+    mockMvc
+        .perform(get("/api/v1/contas/3").header("Authorization", tokenAna))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.saldoAtual").value(200.0));
+  }
+
+  @Test
+  @DisplayName("Resposta 401 serializa URI com aspas em JSON válido")
+  void resposta401SerializaCaracteresEspeciaisComSeguranca() throws Exception {
+    String caminhoEspecial = "/api/v1/contas/\"aspas\"";
+    mockMvc
+        .perform(
+            get("/api/v1/contas")
+                .with(
+                    req -> {
+                      req.setRequestURI(caminhoEspecial);
+                      return req;
+                    }))
+        .andExpect(status().isUnauthorized())
+        .andExpect(jsonPath("$.status").value(401))
+        .andExpect(jsonPath("$.erro").value("Não autenticado"))
+        .andExpect(jsonPath("$.caminho").value(caminhoEspecial));
+  }
+
+  @Test
+  @DisplayName("Atualizar próprio usuário com e-mail em maiúsculas/minúsculas mistas não gera conflito 409")
+  void atualizarProprioUsuarioComEmailCaseDiferenteNaoGeraConflito() throws Exception {
+    String atualizacao = """
+        {
+          "nome": "Ana Atualizada",
+          "email": "Ana@Teste.com",
+          "senha": "novaSenha123",
+          "ativo": true
+        }
+        """;
+    mockMvc
+        .perform(
+            put("/api/v1/usuarios/1")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(atualizacao)
+                .header("Authorization", tokenAna))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.email").value("ana@teste.com"));
+  }
+
+  @Test
+  @DisplayName("Cancelar título define valorEmAberto igual a zero")
+  void cancelarTituloZeraValorEmAberto() throws Exception {
+    String titulo = """
+        {
+          "descricao": "Aluguel",
+          "valorPrevisto": 500.0,
+          "dataVencimento": "2026-04-10",
+          "tipo": "DESPESA",
+          "categoriaId": 1,
+          "usuarioId": 1
+        }
+        """;
+    mockMvc
+        .perform(
+            post("/api/v1/titulos")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(titulo)
+                .header("Authorization", tokenAna))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.idTitulo").value(1));
+
+    mockMvc
+        .perform(post("/api/v1/titulos/1/cancelar").header("Authorization", tokenAna))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.situacao").value("CANCELADO"))
+        .andExpect(jsonPath("$.valorEmAberto").value(0));
+  }
+
+  @Test
+  @DisplayName("Content-Type não suportado retorna 415 em formato ErroResponse")
+  void contentTypeNaoSuportadoRetorna415() throws Exception {
+    mockMvc
+        .perform(
+            post("/api/v1/contas")
+                .contentType(MediaType.TEXT_PLAIN)
+                .content("texto puro")
+                .header("Authorization", tokenAna))
+        .andExpect(status().isUnsupportedMediaType())
+        .andExpect(jsonPath("$.status").value(415))
+        .andExpect(jsonPath("$.erro").value("Tipo de mídia não suportado"));
   }
 }

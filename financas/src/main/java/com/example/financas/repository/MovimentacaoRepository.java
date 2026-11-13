@@ -36,6 +36,8 @@ public interface MovimentacaoRepository extends JpaRepository<Movimentacao, Long
 
   List<Movimentacao> findByContaIdConta(Long contaId);
 
+  List<Movimentacao> findByContaIdContaOrderByDataAscIdMovimentacaoAsc(Long contaId);
+
   List<Movimentacao> findByUsuarioIdUsuarioAndDataBetweenOrderByDataAsc(
       Long usuarioId, LocalDate dataInicio, LocalDate dataFim);
 

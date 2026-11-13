@@ -124,7 +124,7 @@ public class ContaService {
   public Conta validarContaDoUsuario(Long contaId, Long usuarioId) {
     Conta conta = buscarEntidade(contaId);
 
-    if (usuarioId != null && !conta.getUsuario().getIdUsuario().equals(usuarioId)) {
+    if (usuarioId == null || !conta.getUsuario().getIdUsuario().equals(usuarioId)) {
       throw new RegraNegocioException("A conta informada pertence a outro usuário");
     }
 

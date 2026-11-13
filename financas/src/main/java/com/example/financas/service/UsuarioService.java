@@ -54,13 +54,14 @@ public class UsuarioService {
 
   @Transactional
   public UsuarioResponse criar(UsuarioRequest request) {
-    if (usuarioRepository.existsByEmail(request.email())) {
-      throw new RecursoDuplicadoException("Já existe um usuário com o e-mail " + request.email());
+    String emailNormalizado = request.email().trim().toLowerCase(java.util.Locale.ROOT);
+    if (usuarioRepository.existsByEmail(emailNormalizado)) {
+      throw new RecursoDuplicadoException("Já existe um usuário com o e-mail " + emailNormalizado);
     }
 
     Usuario usuario = new Usuario();
-    usuario.setNome(request.nome());
-    usuario.setEmail(request.email());
+    usuario.setNome(request.nome().trim());
+    usuario.setEmail(emailNormalizado);
     usuario.setSenha(passwordEncoder.encode(request.senha()));
     usuario.setAtivo(request.ativoOuPadrao());
 
@@ -70,14 +71,15 @@ public class UsuarioService {
   @Transactional
   public UsuarioResponse atualizar(Long id, UsuarioRequest request) {
     Usuario usuario = buscarEntidade(id);
+    String emailNormalizado = request.email().trim().toLowerCase(java.util.Locale.ROOT);
 
-    if (!usuario.getEmail().equals(request.email())
-        && usuarioRepository.existsByEmail(request.email())) {
-      throw new RecursoDuplicadoException("Já existe um usuário com o e-mail " + request.email());
+    if (!usuario.getEmail().equalsIgnoreCase(emailNormalizado)
+        && usuarioRepository.existsByEmail(emailNormalizado)) {
+      throw new RecursoDuplicadoException("Já existe um usuário com o e-mail " + emailNormalizado);
     }
 
-    usuario.setNome(request.nome());
-    usuario.setEmail(request.email());
+    usuario.setNome(request.nome().trim());
+    usuario.setEmail(emailNormalizado);
     if (request.senha() != null && !request.senha().isBlank()) {
       usuario.setSenha(passwordEncoder.encode(request.senha()));
     }
