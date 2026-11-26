@@ -4,6 +4,20 @@ API REST para gestão de finanças pessoais com **DRE (Demonstração do Resulta
 
 O sistema separa **previsão** de **realização**: um compromisso cadastrado (**Título**) não altera o saldo nem entra na DRE realizada até ser efetivamente liquidado por uma **Movimentação**.
 
+Inclui uma aplicação web (`frontend/`) que consome a API e cobre todos os casos de uso. A documentação técnica completa, com backend e frontend, está em [`Documentacao_Tecnica_Projeto_Final.pdf`](Documentacao_Tecnica_Projeto_Final.pdf).
+
+---
+
+## Aplicação Web
+
+Next.js 16, React 19, TypeScript, Tailwind CSS 4 e shadcn/ui. Todos os dados vêm da API (`/api/v1`), com tema claro e escuro e layout responsivo.
+
+![Painel](frontend/public/03-painel.png)
+
+| Contas | Resultados (DRE) |
+|---|---|
+| ![Contas](frontend/public/04-contas.png) | ![Resultados](frontend/public/10-resultados.png) |
+
 ---
 
 ## Tecnologias
@@ -101,7 +115,13 @@ TÍTULO (Previsão / Compromisso)  ──[pagar / receber]──>  MOVIMENTAÇÃ
    ./mvnw spring-boot:run   # Windows: .\mvnw.cmd spring-boot:run
    ```
 3. **Swagger / OpenAPI:** acesse `http://localhost:8080/swagger-ui.html` (contrato em `/v3/api-docs`).
-4. **Testes:** execute a suíte completa (usa o banco `financas_test`):
+4. **Frontend:** com a API rodando, acesse `http://localhost:5173` (porta liberada no CORS):
+   ```bash
+   cd frontend
+   npm install
+   npm run dev
+   ```
+5. **Testes:** execute a suíte completa (usa o banco `financas_test`):
    ```bash
    cd financas
    .\mvnw.cmd test          # Linux/macOS: ./mvnw test
